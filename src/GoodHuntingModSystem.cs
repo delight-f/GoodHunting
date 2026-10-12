@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
 using GoodHunting.Data;
 using Newtonsoft.Json.Linq;
 using Vintagestory.API.Common;
@@ -20,7 +18,7 @@ namespace GoodHunting;
 /// </summary>
 public class GoodHuntingModSystem : ModSystem
 {
-    public const string ConfigFileName = "goodhunting.json";
+    public const string ConfigFileName = "goodhunting2.json";
 
     private GoodHuntingConfig config = new();
     private int entitiesApplied;
@@ -45,7 +43,7 @@ public class GoodHuntingModSystem : ModSystem
     {
         if (!config.Enabled)
         {
-            api.Logger.Notification("[goodhunting] disabled by config; vanilla drops left untouched.");
+            api.Logger.Notification("[goodhunting2] disabled by config; vanilla drops left untouched.");
             return;
         }
 
@@ -57,11 +55,11 @@ public class GoodHuntingModSystem : ModSystem
     {
         if (!config.Enabled)
         {
-            api.Logger.Notification("[goodhunting] 2.0.0 loaded but disabled by config; vanilla drops in effect.");
+            api.Logger.Notification("[goodhunting2] 2.0.0 loaded but disabled by config; vanilla drops in effect.");
             return;
         }
 
-        api.Logger.Notification("[goodhunting] applied drops to {0} entity types and {1} fish variants " +
+        api.Logger.Notification("[goodhunting2] applied drops to {0} entity types and {1} fish variants " +
             "(hide={2}, fat={3}, meat={4}, feather={5}, all={6}).",
             entitiesApplied, fishApplied,
             config.HideMultiplier, config.FatMultiplier, config.MeatMultiplier,
@@ -86,15 +84,18 @@ public class GoodHuntingModSystem : ModSystem
             for (var i = 0; i < behaviors.Length; i++)
             {
                 var behavior = behaviors[i];
-                var code = behavior?["code"]?.AsString();
+                switch (behavior?["code"]?.AsString())
+                {
+                    // Rewrite only the drops key: the harvestable behaviour carries nothing else
+                    // we own, and clobbering sibling keys would not survive a game update.
+                    case "harvestable" when entry.DropsChanged && behavior!.Token is JObject harvestable:
+                        harvestable["drops"] = DropJson.Drops(DropScaling.ScaleAll(entry.Drops, config));
+                        break;
 
-                if (code == "harvestable" && entry.DropsChanged && behavior != null && behavior.Token is JObject obj)
-                {
-                    obj["drops"] = JArray.Parse(BuildDropsJson(DropScaling.ScaleAll(entry.Drops, config)));
-                }
-                else if (code == "health" && entry.HealthChanged)
-                {
-                    behaviors[i] = JsonObject.FromJson(BuildHealthJson(entry));
+                    // Health is fully ours, so replace the whole behaviour object.
+                    case "health" when entry.HealthChanged:
+                        behaviors[i] = new JsonObject(DropJson.Health(entry));
+                        break;
                 }
             }
 
@@ -165,50 +166,5 @@ public class GoodHuntingModSystem : ModSystem
             };
         }
         return stacks;
-    }
-
-    private static string BuildDropsJson(IReadOnlyList<DropSpec> drops)
-    {
-        var sb = new StringBuilder();
-        sb.Append('[');
-        for (var i = 0; i < drops.Count; i++)
-        {
-            if (i > 0)
-            {
-                sb.Append(',');
-            }
-            var d = drops[i];
-            sb.Append("{\"type\":").Append(Quote(d.Type))
-              .Append(",\"code\":").Append(Quote(d.Code))
-              .Append(",\"quantity\":{\"avg\":").Append(F(d.Avg))
-              .Append(",\"var\":").Append(F(d.Var)).Append("}}");
-        }
-        sb.Append(']');
-        return sb.ToString();
-    }
-
-    private static string BuildHealthJson(EntityEntry entry)
-    {
-        return "{\"code\":\"health\",\"currenthealth\":" + F(entry.CurrentHealth)
-            + ",\"maxhealth\":" + F(entry.MaxHealth) + "}";
-    }
-
-    private static string F(float value) => value.ToString("0.####", CultureInfo.InvariantCulture);
-
-    private static string Quote(string value)
-    {
-        var sb = new StringBuilder(value.Length + 2);
-        sb.Append('"');
-        foreach (var c in value)
-        {
-            sb.Append(c switch
-            {
-                '"' => "\\\"",
-                '\\' => "\\\\",
-                _ => c.ToString(),
-            });
-        }
-        sb.Append('"');
-        return sb.ToString();
     }
 }

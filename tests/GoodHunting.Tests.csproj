@@ -13,27 +13,22 @@
   </PropertyGroup>
 
   <!--
-    Compiles the *pure* logic shared with the mod (no game assembly dependencies)
-    so the tests can run anywhere without the game installed.
+    Compiles the pure logic shared with the mod so the tests can run without the game
+    installed. Everything under src/ is game-free except GoodHuntingModSystem, which is
+    the only file that touches the game assemblies; new pure files are picked up
+    automatically.
   -->
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="../src/Data/Models.cs" />
-    <Compile Include="../src/Data/GoodHuntingData.g.cs" />
-    <Compile Include="../src/DropCategories.cs" />
-    <Compile Include="../src/DropScaling.cs" />
-    <Compile Include="../src/GoodHuntingConfig.cs" />
+    <Compile Include="../src/**/*.cs" Exclude="../src/GoodHuntingModSystem.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Copied to the output: the tests run outside the game and exercise this directly. -->
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(VintageStoryDir)/Lib/Newtonsoft.Json.dll</HintPath>
-      <Private>false</Private>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
-
-  <PropertyGroup>
-    <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory</VintageStoryDir>
-  </PropertyGroup>
 
 </Project>

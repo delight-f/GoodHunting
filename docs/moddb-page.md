@@ -1,8 +1,8 @@
-# Good Hunting
+# Good Hunting 2
 
 ## Vision for the mod
 
-Good Hunting is about making a hunt pay off like a hunt should. In vanilla, a rabbit and a
+Good Hunting 2 is the successor to the original Good Hunting -- the same rebalance, now with a config file. It is about making a hunt pay off like a hunt should. In vanilla, a rabbit and a
 brown bear are cut from the same cloth -- a couple of seconds with a knife and you walk away
 with a predictable pile of meat and a hide. It works, but it never feels like the size of the
 animal matters.
@@ -38,13 +38,13 @@ If you have ever wanted "more meat from the animals I actually worked for", this
 
 ## Installing
 
-1. Put `goodhunting_2.0.0.zip` in your `Mods` folder.
+1. Put `goodhunting2_2.0.0.zip` in your `Mods` folder.
    - Windows: `%appdata%\VintagestoryData\Mods`
    - Linux (Flatpak): `~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/Mods`
    - Server: the `Mods` folder inside your server's data directory.
-2. **Upgrading from Good Hunting 1.x?** Delete the old zip first. Both use the mod id
-   `goodhunting`, so the game can only load one at a time. (Keep the old zip somewhere safe in
-   case you want to roll back.)
+2. **Upgrading from the original Good Hunting?** Remove the old zip. This mod uses its own id
+   (`goodhunting2`), so the two no longer clash -- but they both edit the same animals, so
+   run one or the other. (Keep the old zip safe in case you want to roll back.)
 3. Start the game. That's it -- you are done.
 
 Good Hunting is a **both-sides** mod. In multiplayer, the server and every player who joins
@@ -65,19 +65,19 @@ programming to change it -- if you can edit a text file, you can balance this mo
 **Where the file is:**
 
 ```
-<VintagestoryData>/ModConfig/goodhunting.json
+<VintagestoryData>/ModConfig/goodhunting2.json
 ```
 
 For example, on Windows:
 
 ```
-C:\Users\<YOUR NAME>\AppData\Roaming\VintagestoryData\ModConfig\goodhunting.json
+C:\Users\<YOUR NAME>\AppData\Roaming\VintagestoryData\ModConfig\goodhunting2.json
 ```
 
 On Linux (Flatpak):
 
 ```
-~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/ModConfig/goodhunting.json
+~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/ModConfig/goodhunting2.json
 ```
 
 **Can't find it?** In the Vintage Story main menu, go to Mods, and use the *Open Mod Folder*
@@ -124,7 +124,7 @@ typing a silly value.
 **Three-step example:**
 
 1. Close Vintage Story.
-2. Open `goodhunting.json` in Notepad, change `"meatMultiplier": 1.0` to `"meatMultiplier": 2.0`,
+2. Open `goodhunting2.json` in Notepad, change `"meatMultiplier": 1.0` to `"meatMultiplier": 2.0`,
    and save.
 3. Start the game. Animals now give twice the meat.
 
@@ -160,8 +160,9 @@ Yes. Set `"enabled": false` in the config, or just remove the zip.
 Make sure you saved the file and fully restarted the game, and that you edited the file for the
 side you are actually playing on (both sides in multiplayer).
 
-**Is this compatible with the old Good Hunting?**
-No. They are the same mod id, so remove the old version before installing 2.0.
+**Is this compatible with the original Good Hunting?**
+It has its own mod id, so it will load alongside it -- but both edit the same animals, so
+run one or the other, not both.
 
 ## Details
 
@@ -169,7 +170,7 @@ No. They are the same mod id, so remove the old version before installing 2.0.
 |---|---|
 | Game version | Vintage Story 1.22.7 |
 | Side | Both (client and server) |
-| Mod id | `goodhunting` |
+| Mod id | `goodhunting2` |
 | New world required | No |
 
 ## Credits

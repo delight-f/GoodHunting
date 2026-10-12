@@ -1,6 +1,9 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using GoodHunting;
 using GoodHunting.Data;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace GoodHunting.Tests;
 
@@ -21,6 +24,7 @@ public static class Program
         ClassifierTests();
         ClampTests();
         MultiplierTests();
+        DropJsonTests();
         ParityTests(Path.Combine(root, "tools", "golden_drops.json"));
 
         Console.WriteLine();
@@ -173,6 +177,31 @@ public static class Program
         }
 
         Console.WriteLine($"  golden: {goldenEntities.EnumerateObject().Count()} entity types, {goldenFish.EnumerateObject().Count()} fish variants");
+    }
+
+    private static void DropJsonTests()
+    {
+        Section("drop json");
+
+        // A float must survive serialisation without being promoted to a double, or the JSON
+        // we inject would carry values like 0.7200000286102295 into the engine.
+        var drops = DropJson.Drops(new[] { new DropSpec("item", "hide-raw-large", 0.72f, 0f) });
+        var text = drops.ToString(Formatting.None);
+
+        Check((float)drops[0]!["quantity"]!["avg"]! == 0.72f, "float survives the round trip exactly");
+        Check(drops[0]!["quantity"]!["var"]!.Type == JTokenType.Float, "var is written as a float");
+        Check(text.Contains("\"avg\":0.72"), $"compact number formatting: {text}");
+        Check(!Regex.IsMatch(text, @"\.\d{6,}"), "no float/double promotion artefacts");
+        Check(text.Contains("\"type\":\"item\"") && text.Contains("\"code\":\"hide-raw-large\""), "type and code present");
+
+        var health = DropJson.Health(new EntityEntry { HealthChanged = true, MaxHealth = 44f, CurrentHealth = 44f });
+        Check(health["code"]!.ToString() == "health", "health carries its behaviour code");
+        Check((float)health["maxhealth"]! == 44f && (float)health["currenthealth"]! == 44f, "health numbers exact");
+
+        var scaled = DropJson.Drops(DropScaling.ScaleAll(
+            new[] { new DropSpec("item", "redmeat-raw", 40f, 0f) },
+            new GoodHuntingConfig { MeatMultiplier = 2f }));
+        Check((float)scaled[0]!["quantity"]!["avg"]! == 80f, "configured multiplier reaches the injected json");
     }
 
     private static void Section(string name)

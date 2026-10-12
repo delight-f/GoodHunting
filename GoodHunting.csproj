@@ -16,15 +16,6 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!--
-    Location of the Vintage Story 1.22.x install used for compile-time reference only.
-    Override with: dotnet build -p:VintageStoryDir=/path/to/vintagestory
-  -->
-  <PropertyGroup>
-    <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory</VintageStoryDir>
-    <VintageStoryDir Condition="!Exists('$(VintageStoryDir)/VintagestoryAPI.dll')">$(HOME)/.cache/optimum/src-v0.3.18/.vanilla/linux-x64/vintagestory</VintageStoryDir>
-  </PropertyGroup>
-
   <ItemGroup>
     <!-- The spike probe and test harness are separate projects, not part of the shipped mod. -->
     <Compile Remove="spike/**" />

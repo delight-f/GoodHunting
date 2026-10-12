@@ -5,7 +5,7 @@
 Reworked from a content-patch mod into a code mod. Same tuning by default, now configurable.
 
 **Added**
-- `ModConfig/goodhunting.json` with multipliers: `hideMultiplier`, `fatMultiplier`,
+- `ModConfig/goodhunting2.json` with multipliers: `hideMultiplier`, `fatMultiplier`,
   `meatMultiplier`, `featherMultiplier`, and a global `allMultiplier` applied last.
   `1.0` keeps the original balance; values are clamped to `[0, 100]`.
 - `enabled` switch to disable all changes.
@@ -19,8 +19,9 @@ Reworked from a content-patch mod into a code mod. Same tuning by default, now c
 - Ships as a single code zip (`GoodHunting.dll` + assets).
 
 **Notes**
-- Not compatible with the 1.x mod: same `modid: goodhunting`. Remove the old zip before
-  installing 2.0.
+- Ships under its own mod id, `goodhunting2`, and writes its config to `goodhunting2.json`. It
+  no longer collides with the original Good Hunting, but both rewrite the same animals, so run
+  one or the other.
 - The chicken render-size tweak from 1.x is preserved as a small named-path client asset patch.
 
 ## 1.4.7

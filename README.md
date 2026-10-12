@@ -1,12 +1,12 @@
-# Good Hunting
+# Good Hunting 2
 
 Realistic animal health and harvest yields for [Vintage Story](https://www.vintagestory.at/),
 with configurable drop multipliers.
 
-Good Hunting rebalances what you get from a hunt: leaner, more believable yields per species
-and sex, tuned so a big bear actually yields more than a rabbit. Version 2.0 ships the same
-tuning as the original release, now as a code mod with a config file so you can dial the
-drops up or down without editing a single JSON patch.
+Good Hunting 2 is the successor to the original Good Hunting. It keeps the same tuning --
+leaner, more believable yields per species and sex, so a big bear actually yields more than a
+rabbit -- but ships it as a code mod with a config file, so you can dial the drops up or down
+without editing a single JSON patch.
 
 **Target game version:** Vintage Story 1.22.7 (.NET 10)
 
@@ -26,28 +26,29 @@ animal's drop and health values. That worked, but it had two drawbacks:
 - **No positional patch paths** — values are keyed by entity type, so a game update can't
   quietly mis-target a change.
 - **A config file** with multipliers for hide, fat, meat, feathers, or everything at once.
-- **Identical drops at 1x.** With every multiplier left at `1.0`, the drops are byte-for-byte
-  what 1.4.7 produced — verified against the engine itself (see *Verification*).
+- **Identical drops at 1x.** With every multiplier left at `1.0`, the drops are numerically
+  identical to what 1.4.7 produced — verified against the engine itself (see *Verification*).
 - **One zip** that behaves the same on client and server.
 
 ---
 
 ## Installation
 
-1. Drop `goodhunting_2.0.0.zip` into your `Mods` folder.
+1. Drop `goodhunting2_2.0.0.zip` into your `Mods` folder.
    - Client: `~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/Mods/`
      (Flatpak) or `%appdata%/VintagestoryData/Mods/` (Windows).
    - Server: `<server data>/Mods/`.
-2. **Remove the old Good Hunting mod.** Both use `modid: goodhunting`, so only one can be
-   loaded at a time. Delete the 1.x `goodhunting_*.zip` (and keep it somewhere safe as a
-   rollback) before adding 2.0.
-3. Start the game. The mod writes `ModConfig/goodhunting.json` on first load.
+2. **Remove the original Good Hunting mod if you have it.** This mod uses its own id
+   (`goodhunting2`), so the two no longer collide — but they both rewrite the same animals, so
+   run one or the other. Delete the 1.x `goodhunting_*.zip` (keeping it somewhere safe as your
+   rollback).
+3. Start the game. The mod writes `ModConfig/goodhunting2.json` on first load.
 
 ---
 
 ## Configuration
 
-`ModConfig/goodhunting.json` (created with defaults on first run):
+`ModConfig/goodhunting2.json` (created with defaults on first run):
 
 ```json
 {
@@ -109,7 +110,7 @@ export DOTNET_ROOT=$HOME/.dotnet PATH=$HOME/.dotnet:$PATH
 
 dotnet build -c Release                 # -> bin/Release/GoodHunting.dll
 dotnet run --project tests -c Release -- .   # unit tests + golden parity
-tools/package.sh                        # -> dist/goodhunting_2.0.0.zip
+tools/package.sh                        # -> dist/goodhunting2_2.0.0.zip
 ```
 
 Override the game reference directory if yours differs:
@@ -138,19 +139,19 @@ server; the probe dumps the engine's resolved drops/health with and without the 
   across 479 entity types and 81 fish variants**, and the packaged zip reproduces this.
 - **Multipliers:** with `meatMultiplier: 2`, all 828 owned entity drop entries and 133 fish
   entries doubled exactly; health and unowned types were untouched.
-- **Tests:** `tests/` runs 4,903 assertions (classifier, clamping, multiplier ordering,
-  no-mutation, disabled mode, and full golden parity).
+- **Tests:** `tests/` runs 4,911 assertions (classifier, clamping, multiplier ordering,
+  no-mutation, disabled mode, injected-JSON shape, and full golden parity).
 
 ---
 
 ## Rollback
 
-1. Delete `goodhunting_2.0.0.zip` from `Mods/`.
+1. Delete `goodhunting2_2.0.0.zip` from `Mods/`.
 2. Restore the archived 1.x `goodhunting_*.zip` and restart.
-3. Optionally delete `ModConfig/goodhunting.json` (it is ignored when 2.0 is absent).
+3. Optionally delete `ModConfig/goodhunting2.json` (it is ignored when 2.0 is absent).
 
-Server operators: keep the archived 1.x zip; if both are ever present the game will warn about
-duplicate mod ids, so remove one before restarting.
+Server operators: the ids differ, so the game will not complain if both are present -- but
+running both means two mods writing the same animal data. Keep only one.
 
 ---
 
@@ -161,4 +162,5 @@ Original tuning by **TaimatCompany** and **GreenDragonette**. 2.0 code port and 
 
 ## License
 
-See `LICENSE` (if present) or the original mod page.
+This is a rework of the original Good Hunting mod by TaimatCompany and GreenDragonette; see
+that mod's page for the licensing terms it was released under.
