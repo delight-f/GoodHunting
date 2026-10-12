@@ -17,8 +17,9 @@ If you have ever wanted "more meat from the animals I actually worked for", this
 
 ## What Good Hunting changes
 
-- **Animal health** tuned per species and sex, so larger game takes more punishment and
-  smaller game goes down quickly.
+- **Animal health** retuned per species and sex. Vanilla gives males and females identical
+  health; Good Hunting gives males more than females and adjusts each species individually --
+  pigs, hyenas and moose get tougher, while bears and hares get a little softer.
 - **Harvest drops** -- hides, fat, red meat, bushmeat, poultry and feathers -- rebalanced per
   species and sex, with the amount scaled to how big the animal actually is.
 - **Fish processing** yields tuned per fish, so a 60kg arapaima gives a real meal and a
