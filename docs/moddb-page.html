@@ -1,0 +1,118 @@
+<h2>Vision for the mod</h2>
+<p>Good Hunting is about making a hunt pay off like a hunt should. In vanilla, a rabbit and a brown bear are cut from the same cloth &mdash; a couple of seconds with a knife and you walk away with a predictable pile of meat and a hide. It works, but it never feels like the size of the animal matters.</p>
+<p>Good Hunting rebalances what every animal gives you, species by species and sex by sex, so a big boar is worth more than a fox, and a doe is not a carbon copy of a stag. It does not add new tools, machines or recipes, and it does not change how you hunt, kill or harvest anything. It changes the numbers behind the harvest, and then hands you the keys to those numbers with a config file you can edit in Notepad.</p>
+<p>If you have ever wanted &ldquo;more meat from the animals I actually worked for&rdquo;, this is the mod.</p>
+
+<h2>What Good Hunting changes</h2>
+<ul>
+  <li><strong>Animal health</strong> tuned per species and sex, so larger game takes more punishment and smaller game goes down quickly.</li>
+  <li><strong>Harvest drops</strong> &mdash; hides, fat, red meat, bushmeat, poultry and feathers &mdash; rebalanced per species and sex, with the amount scaled to how big the animal actually is.</li>
+  <li><strong>Fish processing</strong> yields tuned per fish, so a 60&nbsp;kg arapaima gives a real meal and a minnow gives a snack.</li>
+  <li><strong>A simple config file</strong> so you can raise or lower hides, fat, meat and feathers &mdash; or all of them at once &mdash; without ever touching code.</li>
+</ul>
+
+<h2>What it does NOT change</h2>
+<ul>
+  <li>No new items, blocks, tools, machines or recipes.</li>
+  <li>No change to hunting, killing, spawning or breeding.</li>
+  <li>No change to how you harvest. You still use a knife the same way you always have.</li>
+  <li><strong>By default, the drops are exactly the classic Good Hunting tuning.</strong> Every multiplier starts at 1.0, which means &ldquo;leave it as it is&rdquo;. Install it, and the balance is the one the mod has always had. Only the numbers change when you ask them to.</li>
+</ul>
+
+<h2>Installing</h2>
+<ol>
+  <li>Put <code>goodhunting_2.0.0.zip</code> in your <code>Mods</code> folder.
+    <ul>
+      <li>Windows: <code>%appdata%\VintagestoryData\Mods</code></li>
+      <li>Linux (Flatpak): <code>~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/Mods</code></li>
+      <li>Server: the <code>Mods</code> folder inside your server's data directory.</li>
+    </ul>
+  </li>
+  <li><strong>Upgrading from Good Hunting 1.x?</strong> Delete the old zip first. Both use the mod id <code>goodhunting</code>, so the game can only load one at a time. (Keep the old zip somewhere safe in case you want to roll back.)</li>
+  <li>Start the game. That's it &mdash; you are done.</li>
+</ol>
+<p>Good Hunting is a <strong>both-sides</strong> mod. In multiplayer, the server and every player who joins must have it installed, and they must be on the same version.</p>
+
+<h2>Using it</h2>
+<p>There is nothing new to learn. Hunt, kill and harvest the way you always have, and the new yields apply automatically. If it is installed correctly you will simply notice that different animals give different amounts, and that a bear is finally worth the trouble.</p>
+
+<h2>Making it yours &mdash; the config (no coding needed)</h2>
+<p>The first time you run the game with Good Hunting installed, it creates a small settings file for you. It is a plain text file with six lines in it. You do not need to know anything about programming to change it &mdash; if you can edit a text file, you can balance this mod.</p>
+<p><strong>Where the file is:</strong></p>
+<pre>&lt;VintagestoryData&gt;/ModConfig/goodhunting.json</pre>
+<p>For example, on Windows:</p>
+<pre>C:\Users\&lt;YOUR NAME&gt;\AppData\Roaming\VintagestoryData\ModConfig\goodhunting.json</pre>
+<p>On Linux (Flatpak):</p>
+<pre>~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/ModConfig/goodhunting.json</pre>
+<p><strong>Can't find it?</strong> In the Vintage Story main menu, go to Mods, and use the <em>Open Mod Folder</em> button. From there, go up one level and into <code>ModConfig</code>.</p>
+<p><strong>What the file looks like:</strong></p>
+<pre>{
+  "enabled": true,
+  "hideMultiplier": 1.0,
+  "fatMultiplier": 1.0,
+  "meatMultiplier": 1.0,
+  "featherMultiplier": 1.0,
+  "allMultiplier": 1.0
+}</pre>
+
+<h3>What each line means</h3>
+<table>
+  <thead>
+    <tr><th>Line</th><th>Affects</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>enabled</code></td><td>Everything</td><td><code>true</code> turns the mod on, <code>false</code> turns it off completely</td></tr>
+    <tr><td><code>hideMultiplier</code></td><td>Hides</td><td>e.g. animal skins and pelts</td></tr>
+    <tr><td><code>fatMultiplier</code></td><td>Fat</td><td>rendered fat and fat drops</td></tr>
+    <tr><td><code>meatMultiplier</code></td><td>Meat</td><td>red meat, bushmeat, poultry and raw fish</td></tr>
+    <tr><td><code>featherMultiplier</code></td><td>Feathers</td><td>bird feathers</td></tr>
+    <tr><td><code>allMultiplier</code></td><td>Everything</td><td>applied on top of whichever category above also matches</td></tr>
+  </tbody>
+</table>
+
+<p><strong>How the numbers work.</strong> A multiplier is just a &ldquo;times&rdquo; number:</p>
+<ul>
+  <li><code>1.0</code> &mdash; leave this alone (no change). This is the default.</li>
+  <li><code>2.0</code> &mdash; twice as much.</li>
+  <li><code>0.5</code> &mdash; half as much.</li>
+  <li><code>0.0</code> &mdash; none at all.</li>
+</ul>
+<p>So if you want more meat from every animal, change <code>meatMultiplier</code> from <code>1.0</code> to <code>2.0</code>. If you want a generous world, set <code>allMultiplier</code> to <code>1.5</code> and leave the rest alone.</p>
+<p>Multipliers stack. If <code>meatMultiplier</code> is <code>2.0</code> and <code>allMultiplier</code> is <code>3.0</code>, meat ends up six times normal (<code>2 &times; 3</code>). Numbers are capped at <code>100</code>, so you cannot break anything by typing a silly value.</p>
+
+<h3>Three-step example</h3>
+<ol>
+  <li>Close Vintage Story.</li>
+  <li>Open <code>goodhunting.json</code> in Notepad, change <code>"meatMultiplier": 1.0</code> to <code>"meatMultiplier": 2.0</code>, and save.</li>
+  <li>Start the game. Animals now give twice the meat.</li>
+</ol>
+
+<p><strong>A few things to know:</strong></p>
+<ul>
+  <li><strong>Restart the game after editing.</strong> The file is read when the world loads, so a change will not apply until you reload.</li>
+  <li><strong>In multiplayer, edit the file on both the server and your client.</strong> They should match.</li>
+  <li><strong>Do not worry about formatting.</strong> Keep the quotes and the comma at the end of each line and you will be fine. If you break the file, delete it &mdash; the game will simply write a fresh one.</li>
+  <li><strong>Hides are an average.</strong> Setting <code>hideMultiplier</code> above <code>1.0</code> can occasionally give you more than one hide from a single animal. If that bothers you, leave hides at <code>1.0</code> and boost <code>fatMultiplier</code> and <code>meatMultiplier</code> instead.</li>
+</ul>
+
+<h2>Q &amp; A</h2>
+<p><strong>Does this give more than vanilla?</strong><br />By default it changes the balance rather than simply inflating it &mdash; some animals give a little less, big ones give much more. Crank the multipliers up if you want a more generous world.</p>
+<p><strong>Will it work with other animal mods?</strong><br />Good Hunting only touches the animals it knows about. Animal mods it has not been told about are left exactly as they are.</p>
+<p><strong>Do I need to start a new world?</strong><br />No. Drops and health are read when the game loads, so your existing world keeps working. You can add or remove it at any time.</p>
+<p><strong>Can I turn it off without uninstalling it?</strong><br />Yes. Set <code>"enabled": false</code> in the config, or just remove the zip.</p>
+<p><strong>I changed the config and nothing happened.</strong><br />Make sure you saved the file and fully restarted the game, and that you edited the file for the side you are actually playing on (both sides in multiplayer).</p>
+<p><strong>Is this compatible with the old Good Hunting?</strong><br />No. They are the same mod id, so remove the old version before installing 2.0.</p>
+
+<h2>Details</h2>
+<table>
+  <tbody>
+    <tr><td>Game version</td><td>Vintage Story 1.22.7</td></tr>
+    <tr><td>Side</td><td>Both (client and server)</td></tr>
+    <tr><td>Mod id</td><td><code>goodhunting</code></td></tr>
+    <tr><td>New world required</td><td>No</td></tr>
+  </tbody>
+</table>
+
+<h2>Credits</h2>
+<p>Original balance tuning and the 1.x releases by <strong>TaimatCompany</strong> and <strong>GreenDragonette</strong>. Version 2.0 reworks the mod into a code mod with a config file, by <strong>sineapse</strong>, while keeping the original numbers identical at the default settings.</p>
+<p>Thanks for downloading &mdash; and good hunting.</p>

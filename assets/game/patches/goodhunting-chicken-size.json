@@ -1,0 +1,13 @@
+[
+  {
+    "side": "Client",
+    "file": "game:entities/animal/bird/chicken-adult.json",
+    "op": "replace",
+    "path": "/client/sizeByType",
+    "value": {
+      "*-roosterpoult": 0.72,
+      "*-rooster": 1.2,
+      "*": 1
+    }
+  }
+]

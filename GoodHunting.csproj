@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>GoodHunting</AssemblyName>
+    <RootNamespace>GoodHunting</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>2.0.0</Version>
+    <Company>Good Hunting contributors</Company>
+    <Product>Good Hunting</Product>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Location of the Vintage Story 1.22.x install used for compile-time reference only.
+    Override with: dotnet build -p:VintageStoryDir=/path/to/vintagestory
+  -->
+  <PropertyGroup>
+    <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory</VintageStoryDir>
+    <VintageStoryDir Condition="!Exists('$(VintageStoryDir)/VintagestoryAPI.dll')">$(HOME)/.cache/optimum/src-v0.3.18/.vanilla/linux-x64/vintagestory</VintageStoryDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The spike probe and test harness are separate projects, not part of the shipped mod. -->
+    <Compile Remove="spike/**" />
+    <None Remove="spike/**" />
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VintageStoryDir)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSEssentials">
+      <HintPath>$(VintageStoryDir)/Mods/VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSSurvivalMod">
+      <HintPath>$(VintageStoryDir)/Mods/VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(VintageStoryDir)/Lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

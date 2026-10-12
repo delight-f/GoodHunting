@@ -1,0 +1,8 @@
+{
+	"dependencies": { "game": "1.22.0" },
+	"type": "code",
+	"modid": "ghprobe",
+	"name": "GH Probe",
+	"description": "Phase 0 diagnostic probe.",
+	"version": "0.0.1"
+}

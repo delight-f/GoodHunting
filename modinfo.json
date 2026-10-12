@@ -1,0 +1,11 @@
+{
+	"dependencies": {
+		"game": "1.22.0"
+	},
+	"authors": ["TaimatCompany", "GreenDragonette", "sineapse"],
+	"type": "code",
+	"modid": "goodhunting",
+	"name": "Good Hunting",
+	"description": "Adjusts health and harvest values for realism, with configurable drop multipliers.",
+	"version": "2.0.0"
+}

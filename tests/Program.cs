@@ -1,0 +1,200 @@
+using System.Text.Json;
+using GoodHunting;
+using GoodHunting.Data;
+
+namespace GoodHunting.Tests;
+
+/// <summary>
+/// Lightweight self-contained test runner (no external test framework / network needed).
+/// Exit code 0 = all pass, 1 = failure. Run from the repository root:
+///     dotnet run --project tests
+/// </summary>
+public static class Program
+{
+    private static int failures;
+    private static int checks;
+
+    public static int Main(string[] args)
+    {
+        var root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
+
+        ClassifierTests();
+        ClampTests();
+        MultiplierTests();
+        ParityTests(Path.Combine(root, "tools", "golden_drops.json"));
+
+        Console.WriteLine();
+        Console.WriteLine($"{checks - failures}/{checks} checks passed.");
+        return failures == 0 ? 0 : 1;
+    }
+
+    private static void ClassifierTests()
+    {
+        Section("classifier");
+        Check(DropCategories.Classify("hide-raw-bear-black-complete") == DropCategory.Hide, "hide-raw-* -> hide");
+        Check(DropCategories.Classify("hide-raw-huge") == DropCategory.Hide, "hide-raw-huge -> hide");
+        Check(DropCategories.Classify("fat") == DropCategory.Fat, "fat -> fat");
+        Check(DropCategories.Classify("redmeat-raw") == DropCategory.Meat, "redmeat-raw -> meat");
+        Check(DropCategories.Classify("bushmeat-raw") == DropCategory.Meat, "bushmeat-raw -> meat");
+        Check(DropCategories.Classify("poultry-raw") == DropCategory.Meat, "poultry-raw -> meat");
+        Check(DropCategories.Classify("game:fish-raw") == DropCategory.Meat, "game:fish-raw -> meat");
+        Check(DropCategories.Classify("feather") == DropCategory.Feather, "feather -> feather");
+        Check(DropCategories.Classify("bone") == DropCategory.None, "bone -> none");
+        Check(DropCategories.Classify(null) == DropCategory.None, "null -> none");
+    }
+
+    private static void ClampTests()
+    {
+        Section("clamp");
+        Check(GoodHuntingConfig.Clamp(1_000_000f) == 100f, "huge -> 100");
+        Check(GoodHuntingConfig.Clamp(-5f) == 0f, "negative -> 0");
+        Check(GoodHuntingConfig.Clamp(float.NaN) == 1f, "NaN -> identity");
+        Check(GoodHuntingConfig.Clamp(2.5f) == 2.5f, "in-range unchanged");
+
+        var cfg = new GoodHuntingConfig { HideMultiplier = 999f, AllMultiplier = -1f };
+        Check(cfg.ClampAll(), "ClampAll reports change");
+        Check(cfg.HideMultiplier == 100f && cfg.AllMultiplier == 0f, "fields clamped");
+    }
+
+    private static void MultiplierTests()
+    {
+        Section("multipliers");
+
+        var identity = new GoodHuntingConfig();
+        var meat = new DropSpec("item", "redmeat-raw", 10f, 4f);
+        var scaledIdentity = DropScaling.Scale(meat, identity);
+        Check(scaledIdentity.Avg == 10f && scaledIdentity.Var == 4f, "1.0 is identity");
+
+        var cfg = new GoodHuntingConfig { MeatMultiplier = 2f };
+        var doubled = DropScaling.Scale(meat, cfg);
+        Check(doubled.Avg == 20f && doubled.Var == 8f, "2x doubles avg and var");
+        Check(doubled.Code == "redmeat-raw" && doubled.Type == "item", "2x leaves code/type untouched");
+
+        var hide = new DropSpec("item", "hide-raw-large", 1f, 0f);
+        Check(DropScaling.Scale(hide, cfg).Avg == 1f, "meat multiplier does not touch hide");
+
+        // 'all' applies last, on top of the category multiplier (multiplicative)
+        var compound = new GoodHuntingConfig { MeatMultiplier = 2f, AllMultiplier = 3f };
+        var c = DropScaling.Scale(meat, compound);
+        Check(c.Avg == 60f && c.Var == 24f, "all compounds with category (2*3)");
+        Check(DropScaling.Scale(new DropSpec("item", "bone", 5f, 1f), compound).Avg == 15f, "all applies to uncategorised drops");
+
+        // disabled => identity regardless of multipliers
+        var off = new GoodHuntingConfig { Enabled = false, MeatMultiplier = 5f, AllMultiplier = 7f };
+        var o = DropScaling.Scale(meat, off);
+        Check(o.Avg == 10f && o.Var == 4f, "disabled => identity");
+
+        // scaling must not mutate the shared source table
+        var source = new DropSpec("item", "fat", 5f, 2f);
+        DropScaling.Scale(source, new GoodHuntingConfig { FatMultiplier = 4f });
+        Check(source.Avg == 5f && source.Var == 2f, "source table not mutated");
+    }
+
+    private static void ParityTests(string goldenPath)
+    {
+        Section("parity vs golden (1x)");
+        if (!File.Exists(goldenPath))
+        {
+            Fail($"golden fixture missing: {goldenPath}");
+            return;
+        }
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(goldenPath));
+        var rootEl = doc.RootElement;
+        var goldenEntities = rootEl.GetProperty("entities");
+        var goldenFish = rootEl.GetProperty("fish");
+
+        // every golden entity must exist in the C# table, exactly
+        var seen = new HashSet<string>();
+        foreach (var prop in goldenEntities.EnumerateObject())
+        {
+            seen.Add(prop.Name);
+            var code = prop.Name;
+            var g = prop.Value;
+            if (!GoodHuntingData.Entities.TryGetValue(code, out var entry))
+            {
+                Fail($"entity missing from C# table: {code}");
+                continue;
+            }
+
+            if (g.TryGetProperty("drops", out var goldDrops))
+            {
+                Check(entry.DropsChanged, $"{code}: DropsChanged");
+                Check(entry.Drops.Length == goldDrops.GetArrayLength(), $"{code}: drop count {entry.Drops.Length} == {goldDrops.GetArrayLength()}");
+                for (var i = 0; i < Math.Min(entry.Drops.Length, goldDrops.GetArrayLength()); i++)
+                {
+                    var gd = goldDrops[i];
+                    var cd = entry.Drops[i];
+                    Check(cd.Code == gd.GetProperty("code").GetString(), $"{code}[{i}]: code {cd.Code}");
+                    Check(cd.Type == gd.GetProperty("type").GetString(), $"{code}[{i}]: type");
+                    Check(Math.Abs(cd.Avg - gd.GetProperty("avg").GetSingle()) < 1e-4, $"{code}[{i}]: avg {cd.Avg}");
+                    Check(Math.Abs(cd.Var - gd.GetProperty("var").GetSingle()) < 1e-4, $"{code}[{i}]: var {cd.Var}");
+                }
+            }
+            else
+            {
+                Check(!entry.DropsChanged, $"{code}: no unexpected drop change");
+            }
+
+            if (g.TryGetProperty("health", out var goldHealth))
+            {
+                Check(entry.HealthChanged, $"{code}: HealthChanged");
+                Check(Math.Abs(entry.MaxHealth - goldHealth.GetProperty("max").GetSingle()) < 1e-4, $"{code}: max {entry.MaxHealth}");
+                Check(Math.Abs(entry.CurrentHealth - goldHealth.GetProperty("current").GetSingle()) < 1e-4, $"{code}: current {entry.CurrentHealth}");
+            }
+        }
+
+        foreach (var key in GoodHuntingData.Entities.Keys)
+        {
+            Check(seen.Contains(key), $"no extra entity in C# table: {key}");
+        }
+
+        var seenFish = new HashSet<string>();
+        foreach (var prop in goldenFish.EnumerateObject())
+        {
+            seenFish.Add(prop.Name);
+            if (!GoodHuntingData.Fish.TryGetValue(prop.Name, out var fish))
+            {
+                Fail($"fish missing from C# table: {prop.Name}");
+                continue;
+            }
+            var arr = prop.Value;
+            Check(fish.Length == arr.GetArrayLength(), $"{prop.Name}: fish count");
+            for (var i = 0; i < Math.Min(fish.Length, arr.GetArrayLength()); i++)
+            {
+                Check(fish[i].Code == arr[i].GetProperty("code").GetString(), $"{prop.Name}[{i}]: code");
+                Check(Math.Abs(fish[i].Avg - arr[i].GetProperty("avg").GetSingle()) < 1e-4, $"{prop.Name}[{i}]: avg");
+                Check(Math.Abs(fish[i].Var - arr[i].GetProperty("var").GetSingle()) < 1e-4, $"{prop.Name}[{i}]: var");
+            }
+        }
+        foreach (var key in GoodHuntingData.Fish.Keys)
+        {
+            Check(seenFish.Contains(key), $"no extra fish in C# table: {key}");
+        }
+
+        Console.WriteLine($"  golden: {goldenEntities.EnumerateObject().Count()} entity types, {goldenFish.EnumerateObject().Count()} fish variants");
+    }
+
+    private static void Section(string name)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"== {name} ==");
+    }
+
+    private static void Check(bool ok, string what)
+    {
+        checks++;
+        if (!ok)
+        {
+            failures++;
+            Console.WriteLine($"  FAIL: {what}");
+        }
+    }
+
+    private static void Fail(string what)
+    {
+        checks++;
+        failures++;
+        Console.WriteLine($"  FAIL: {what}");
+    }
+}
