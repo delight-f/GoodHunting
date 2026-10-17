@@ -9,9 +9,9 @@
     <LangVersion>latest</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <Version>2.0.0</Version>
+    <Version>3.0.0</Version>
     <Company>Good Hunting contributors</Company>
-    <Product>Good Hunting</Product>
+    <Product>Good Hunting Forked</Product>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
@@ -42,5 +42,11 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- Fail loudly rather than with a wall of missing-reference errors. -->
+  <Target Name="EnsureVintageStoryReference" BeforeTargets="CoreCompile"
+          Condition="!Exists('$(VintageStoryDir)/VintagestoryAPI.dll')">
+    <Error Text="Vintage Story reference assemblies not found at '$(VintageStoryDir)'. Pass the path to your install with -p:VintageStoryDir=/path/to/vintagestory" />
+  </Target>
 
 </Project>

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
@@ -24,7 +25,13 @@ public class ProbeModSystem : ModSystem
     public override double ExecuteOrder() => 2.0;
 
     public override void AssetsFinalize(ICoreAPI api) => Guard(api, "assetsfinalize");
-    public override void StartServerSide(ICoreServerAPI api) => Guard(api, "startserverside");
+    public override void StartServerSide(ICoreServerAPI api)
+    {
+        Guard(api, "startserverside");
+        // Collectible OnLoaded (which resolves processed stacks) runs after StartServerSide; the
+        // server asset packet sent to clients is built after WorldReady.
+        api.Event.ServerRunPhase(EnumServerRunPhase.WorldReady, () => Guard(api, "worldready"));
+    }
 
     static void Guard(ICoreAPI api, string stage)
     {
@@ -56,25 +63,12 @@ public class ProbeModSystem : ModSystem
             first = false;
             sb.Append("    ").Append(J(code)).Append(": {");
 
-            sb.Append("\"drops\": [");
-            var drops = harvest?["drops"];
-            if (drops != null)
-            {
-                var arr = drops.AsArray();
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    var d = arr[i];
-                    if (i > 0) sb.Append(",");
-                    var q = d["quantity"];
-                    sb.Append("{\"type\":").Append(J(d["type"]?.AsString() ?? "item"))
-                      .Append(",\"code\":").Append(J(d["code"]?.AsString() ?? ""))
-                      .Append(",\"avg\":").Append(F(q?["avg"]?.AsFloat()))
-                      .Append(",\"var\":").Append(F(q?["var"]?.AsFloat()))
-                      .Append("}");
-                    dropCount++;
-                }
-            }
-            sb.Append("]");
+            sb.Append("\"drops\": ");
+            dropCount += AppendDrops(sb, harvest?["drops"]);
+
+            // What clients receive: the handbook's harvestableDrops attribute.
+            sb.Append(",\"attrDrops\": ");
+            AppendDrops(sb, t.Attributes?["harvestableDrops"]);
 
             if (health != null)
             {
@@ -86,7 +80,9 @@ public class ProbeModSystem : ModSystem
                 sb.Append("}");
             }
 
-            // resolved client render size (legacy chicken patch touches client/sizeByType)
+            // What clients receive: their own health behaviour and the render size.
+            var clientHealth = t.Client?.BehaviorsAsJsonObj?.FirstOrDefault(jo => jo?["code"]?.AsString() == "health");
+            sb.Append(",\"clientMaxHealth\":").Append(F(NullableFloat(clientHealth?["maxhealth"])));
             sb.Append(",\"clientSize\":").Append(F(t.Client?.Size));
             sb.Append("}");
         }
@@ -124,7 +120,19 @@ public class ProbeModSystem : ModSystem
         }
         sb.Append("\n  },\n");
 
-        sb.Append("  \"clientSizeByType\": {}\n}\n");
+        // What clients receive for fish: the behaviour properties string sent in the asset packet.
+        sb.Append("  \"fishSentToClient\": {\n");
+        first = true;
+        foreach (var f in fishItems)
+        {
+            var gsp = f.CollectibleBehaviors?.OfType<CollectibleBehaviorGroundStoredProcessable>().FirstOrDefault();
+            if (gsp?.propertiesAtString == null) continue;
+            if (!first) sb.Append(",\n");
+            first = false;
+            sb.Append("    ").Append(J(f.Code.Path)).Append(": ");
+            AppendDrops(sb, new JsonObject(JToken.Parse(gsp.propertiesAtString))["processedStacks"]);
+        }
+        sb.Append("\n  }\n}\n");
 
         // Fish stacks must be resolved (ResolvedItemstack != null) or processing yields nothing.
         int totalStacks = 0, unresolved = 0;
@@ -155,6 +163,25 @@ public class ProbeModSystem : ModSystem
 
     static float? NullableFloat(JsonObject o) => o == null ? null : o.AsFloat();
     static string F(float? f) => f == null ? "null" : f.Value.ToString("0.####", CultureInfo.InvariantCulture);
+
+    static int AppendDrops(StringBuilder sb, JsonObject drops)
+    {
+        sb.Append("[");
+        var arr = drops?.Exists == true ? drops.AsArray() : Array.Empty<JsonObject>();
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var d = arr[i];
+            if (i > 0) sb.Append(",");
+            var q = d["quantity"];
+            sb.Append("{\"type\":").Append(J(d["type"]?.AsString() ?? "item"))
+              .Append(",\"code\":").Append(J(d["code"]?.AsString() ?? ""))
+              .Append(",\"avg\":").Append(F(q?["avg"]?.AsFloat()))
+              .Append(",\"var\":").Append(F(q?["var"]?.AsFloat()))
+              .Append("}");
+        }
+        sb.Append("]");
+        return arr.Length;
+    }
 
     static string Map(JsonObject o)
     {

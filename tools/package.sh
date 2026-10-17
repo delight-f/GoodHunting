@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Good Hunting 2 and produce the distributable mod zip.
+# Test, build Good Hunting Forked and produce the distributable mod zip.
 #
 # Usage: tools/package.sh [version]
 # Output: dist/<modid>_<version>.zip
@@ -15,13 +15,16 @@ MODID="$(python3 -c "import json;print(json.load(open('modinfo.json'))['modid'])
 VERSION="$(python3 -c "import json;print(json.load(open('modinfo.json'))['version'])")"
 VERSION="${1:-$VERSION}"
 
+echo "== tests =="
+"$DOTNET" run --project tests -c Release -- "$ROOT"
+
 echo "== build (Release) =="
 "$DOTNET" build -c Release
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-cp modinfo.json "$STAGE/"
+cp modinfo.json modicon.png "$STAGE/"
 cp bin/Release/GoodHunting.dll "$STAGE/"
 mkdir -p "$STAGE/assets"
 cp -r assets/. "$STAGE/assets/"

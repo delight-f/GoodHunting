@@ -44,8 +44,8 @@ def drop(d) -> dict:
 
 
 def build_golden() -> dict:
-    vanilla = json.load(open(os.path.join(FIX, "vanilla_dump.json")))
-    patched = json.load(open(os.path.join(FIX, "patched_dump.json")))
+    vanilla = load(os.path.join(FIX, "vanilla_dump.json"))
+    patched = load(os.path.join(FIX, "patched_dump.json"))
 
     entities = {}
     for code, pv in patched["entities"].items():
@@ -60,12 +60,10 @@ def build_golden() -> dict:
         p_h = pv.get("health")
         v_h = vv.get("health")
         if p_h != v_h:
-            # Resolve health: prefer flat, else the single matching byType value.
-            # The engine already resolved byType per expanded type in most builds,
-            # but some entity JSONs keep a byType map; resolve against this type code.
+            # The engine resolves *ByType per expanded type, so the dump carries flat values.
             entry["health"] = {
-                "max": resolve_health(p_h, v_h, code, "maxhealth"),
-                "current": resolve_health(p_h, v_h, code, "currenthealth"),
+                "max": health_value(p_h, code, "maxhealth"),
+                "current": health_value(p_h, code, "currenthealth"),
             }
 
         if entry:
@@ -85,53 +83,22 @@ def build_golden() -> dict:
     }
 
 
-def wildcard_match(pattern: str, text: str) -> bool:
-    """Vintage Story style wildcard match: '*' only."""
-    parts = pattern.split("*")
-    if len(parts) == 1:
-        return pattern == text
-    if not text.startswith(parts[0]):
-        return False
-    text = text[len(parts[0]):]
-    for part in parts[1:-1]:
-        i = text.find(part)
-        if i < 0:
-            return False
-        text = text[i + len(part):]
-    return text.endswith(parts[-1])
+def load(path: str):
+    with open(path) as fh:
+        return json.load(fh)
 
 
-def resolve_health(h, v_h, code, key):
-    """Pick the concrete health value for `code` from a flat or byType health object."""
-    if not h:
-        return None
-    flat = h.get(key)
-    by = h.get(key + "ByType") or {}
-    if by:
-        # exact first, then wildcard; last match wins like the engine's dictionary scan
-        best = None
-        for pat, val in by.items():
-            if wildcard_match(pat, code):
-                best = val
-        if best is not None:
-            return num(best)
-    if flat is not None:
-        return num(flat)
-    # fall back to vanilla value so unchanged health is never accidentally zeroed
-    if v_h:
-        return num(v_h.get(key))
-    return None
+def health_value(h, code: str, key: str) -> float:
+    value = num((h or {}).get(key))
+    if value is None:
+        raise SystemExit(f"{code}: no resolved {key} in the patched dump")
+    return value
 
 
 def f(x) -> str:
     if x is None:
-        return "0f"
-    s = f"{float(x):g}"
-    if "." not in s and "e" not in s and "E" not in s:
-        s += "f"
-    else:
-        s += "f"
-    return s
+        raise ValueError("missing number")
+    return f"{float(x):g}f"
 
 
 def gen_csharp(golden: dict) -> str:

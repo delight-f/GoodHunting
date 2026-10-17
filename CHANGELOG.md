@@ -1,5 +1,35 @@
 # Changelog
 
+## 3.0.0
+
+Renamed to Good Hunting Forked and made server-side only. Same tuning and config keys.
+
+**Breaking**
+- Mod id is now `goodhuntingforked` and the config file `ModConfig/goodhuntingforked.json`.
+  Remove `goodhunting2_*.zip`; rename `goodhunting2.json` to keep your settings.
+- Server-side only (`"side": "Server"`). Players no longer install it, and only the server's
+  config is used.
+- Requires Vintage Story 1.22.7 (the version it is built and verified against).
+
+**Fixed**
+- The chicken render-size tweak never applied in 2.0.0: its patch targeted the client, which
+  never loads entity files. It is a server patch again, and keeps vanilla 1.22's poult size.
+- The handbook's "obtained by killing" lists showed vanilla drops, because the game copied
+  them for clients before this mod ran. The copy is now refreshed.
+- The fish yields in a player's handbook followed that player's own config instead of the server's.
+- Health changes no longer replace the whole health behaviour, which wiped any other keys on
+  it, including other mods' patches.
+- Only `game:` entities and items are matched, so another mod's entity or item with the same
+  path is no longer overwritten.
+- A malformed config is logged clearly and left untouched; the mod runs at defaults until it is
+  fixed.
+- Table entries that cannot be applied (e.g. renamed by a game update) are listed in a warning
+  instead of being skipped silently; the load summary counts only what was applied.
+
+**Changed**
+- Ships the original mod icon.
+- Tests build and run without a Vintage Story install; `tools/package.sh` runs them first.
+
 ## 2.0.0
 
 Reworked from a content-patch mod into a code mod. Same tuning by default, now configurable.

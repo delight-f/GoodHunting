@@ -194,10 +194,6 @@ public static class Program
         Check(!Regex.IsMatch(text, @"\.\d{6,}"), "no float/double promotion artefacts");
         Check(text.Contains("\"type\":\"item\"") && text.Contains("\"code\":\"hide-raw-large\""), "type and code present");
 
-        var health = DropJson.Health(new EntityEntry { HealthChanged = true, MaxHealth = 44f, CurrentHealth = 44f });
-        Check(health["code"]!.ToString() == "health", "health carries its behaviour code");
-        Check((float)health["maxhealth"]! == 44f && (float)health["currenthealth"]! == 44f, "health numbers exact");
-
         var scaled = DropJson.Drops(DropScaling.ScaleAll(
             new[] { new DropSpec("item", "redmeat-raw", 40f, 0f) },
             new GoodHuntingConfig { MeatMultiplier = 2f }));

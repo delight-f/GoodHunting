@@ -1,37 +1,50 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using GoodHunting.Data;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Vintagestory.API.Common;
-using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
-using Vintagestory.API.MathTools;
-using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
 namespace GoodHunting;
 
 /// <summary>
-/// Good Hunting 2.0.0. Owns animal harvest drops + health in C# and applies configurable
-/// multipliers. Injects by rewriting <see cref="EntityServerProperties.BehaviorsAsJsonObj"/>
-/// (the same structure the legacy content-patch mod produced) and by setting the fish
-/// processing behaviour's <see cref="CollectibleBehaviorGroundStoredProcessable.ProcessedStacks"/>.
+/// Owns animal harvest drops, animal health and fish processing yields, and applies the configured
+/// multipliers. Server-only: every change reaches clients through the server's asset packet (entity
+/// attributes and client behaviours, collectible behaviour properties), so clients need neither the
+/// mod nor a matching config.
 /// </summary>
 public class GoodHuntingModSystem : ModSystem
 {
-    public const string ConfigFileName = "goodhunting2.json";
+    public const string ConfigFileName = "goodhuntingforked.json";
 
     private GoodHuntingConfig config = new();
-    private int entitiesApplied;
-    private int fishApplied;
 
-    public override bool ShouldLoad(EnumAppSide forSide) => true;
+    public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
-    // Run after the built-in harvestable drop sync (ExecuteOrder 0.1).
+    // Late in AssetsFinalize so these tables win over other mods' finalize-time edits. The built-in
+    // harvestable drop sync (ExecuteOrder 0.1) has already copied the vanilla drops by then, so
+    // ApplyEntities refreshes that copy itself.
     public override double ExecuteOrder() => 1.0;
 
     public override void StartPre(ICoreAPI api)
     {
-        var loaded = api.LoadModConfig<GoodHuntingConfig>(ConfigFileName);
+        GoodHuntingConfig? loaded;
+        try
+        {
+            loaded = api.LoadModConfig<GoodHuntingConfig>(ConfigFileName);
+        }
+        catch (Exception e) when (e is JsonException or IOException)
+        {
+            // Leave the user's file alone so they can fix it.
+            Mod.Logger.Error("ModConfig/{0} could not be read and was left untouched; running with default settings until it is fixed: {1}",
+                ConfigFileName, e.Message);
+            return;
+        }
+
         config = loaded ?? new GoodHuntingConfig();
         if (loaded == null || config.ClampAll())
         {
@@ -43,128 +56,117 @@ public class GoodHuntingModSystem : ModSystem
     {
         if (!config.Enabled)
         {
-            api.Logger.Notification("[goodhunting2] disabled by config; vanilla drops left untouched.");
+            Mod.Logger.Notification("{0} disabled by config; vanilla drops and health left untouched.", Mod.Info.Version);
             return;
         }
 
-        ApplyEntities(api);
-        ApplyFish(api);
-    }
+        var entities = ApplyEntities(api);
+        var fish = ApplyFish(api);
 
-    public override void StartServerSide(ICoreServerAPI api)
-    {
-        if (!config.Enabled)
-        {
-            api.Logger.Notification("[goodhunting2] 2.0.0 loaded but disabled by config; vanilla drops in effect.");
-            return;
-        }
-
-        api.Logger.Notification("[goodhunting2] applied drops to {0} entity types and {1} fish variants " +
-            "(hide={2}, fat={3}, meat={4}, feather={5}, all={6}).",
-            entitiesApplied, fishApplied,
+        Mod.Logger.Notification("{0} applied to {1}/{2} entity types and {3}/{4} fish variants " +
+            "(hide={5}, fat={6}, meat={7}, feather={8}, all={9}).",
+            Mod.Info.Version, entities, GoodHuntingData.Entities.Count, fish, GoodHuntingData.Fish.Count,
             config.HideMultiplier, config.FatMultiplier, config.MeatMultiplier,
             config.FeatherMultiplier, config.AllMultiplier);
     }
 
-    private void ApplyEntities(ICoreAPI api)
+    private int ApplyEntities(ICoreAPI api)
     {
+        var applied = new HashSet<string>();
         foreach (var type in api.World.EntityTypes)
         {
-            if (type?.Code == null || !GoodHuntingData.Entities.TryGetValue(type.Code.Path, out var entry))
+            if (type?.Code?.Domain != GlobalConstants.DefaultDomain
+                || !GoodHuntingData.Entities.TryGetValue(type.Code.Path, out var entry)
+                || type.Server?.BehaviorsAsJsonObj is not { } behaviors)
             {
                 continue;
             }
 
-            var behaviors = type.Server?.BehaviorsAsJsonObj;
-            if (behaviors == null)
+            var dropsDone = !entry.DropsChanged;
+            var healthDone = !entry.HealthChanged;
+            foreach (var behavior in behaviors)
             {
-                continue;
-            }
-
-            for (var i = 0; i < behaviors.Length; i++)
-            {
-                var behavior = behaviors[i];
-                switch (behavior?["code"]?.AsString())
+                if (behavior?.Token is not JObject token)
                 {
-                    // Rewrite only the drops key: the harvestable behaviour carries nothing else
-                    // we own, and clobbering sibling keys would not survive a game update.
-                    case "harvestable" when entry.DropsChanged && behavior!.Token is JObject harvestable:
-                        harvestable["drops"] = DropJson.Drops(DropScaling.ScaleAll(entry.Drops, config));
+                    continue;
+                }
+
+                switch (behavior["code"].AsString())
+                {
+                    // Write only the keys we own: sibling keys (sounds, hail damage, other mods'
+                    // patches) must survive.
+                    case "harvestable" when entry.DropsChanged:
+                        var drops = DropJson.Drops(DropScaling.ScaleAll(entry.Drops, config));
+                        token["drops"] = drops;
+                        // Clients read the handbook's "obtained by killing" lists from this attribute.
+                        if (type.Attributes?.Token is not JObject attributes)
+                        {
+                            attributes = new JObject();
+                            type.Attributes = new JsonObject(attributes);
+                        }
+                        attributes["harvestableDrops"] = drops.DeepClone();
+                        dropsDone = true;
                         break;
 
-                    // Health is fully ours, so replace the whole behaviour object.
+                    // The client's health behaviour shares this token, so it follows too.
                     case "health" when entry.HealthChanged:
-                        behaviors[i] = new JsonObject(DropJson.Health(entry));
+                        token["maxhealth"] = entry.MaxHealth;
+                        token["currenthealth"] = entry.CurrentHealth;
+                        healthDone = true;
                         break;
                 }
             }
 
-            entitiesApplied++;
+            if (dropsDone && healthDone)
+            {
+                applied.Add(type.Code.Path);
+            }
         }
+
+        WarnUnapplied("entity types", GoodHuntingData.Entities.Keys, applied);
+        return applied.Count;
     }
 
-    private void ApplyFish(ICoreAPI api)
+    private int ApplyFish(ICoreAPI api)
     {
+        var applied = new HashSet<string>();
         foreach (var collectible in api.World.Collectibles)
         {
-            if (collectible?.Code == null || !GoodHuntingData.Fish.TryGetValue(collectible.Code.Path, out var table))
+            if (collectible?.Code?.Domain != GlobalConstants.DefaultDomain
+                || !GoodHuntingData.Fish.TryGetValue(collectible.Code.Path, out var table)
+                || collectible.CollectibleBehaviors?.OfType<CollectibleBehaviorGroundStoredProcessable>().FirstOrDefault() is not { } behavior)
             {
                 continue;
             }
 
-            var behavior = FindProcessable(collectible);
-            if (behavior == null)
-            {
-                continue;
-            }
+            var drops = DropJson.Drops(DropScaling.ScaleAll(table, config));
 
-            // The engine resolved the *vanilla* stacks during OnLoaded, before AssetsFinalize.
-            // We replace them, so we must resolve the new stacks ourselves or they are unusable
-            // (BlockDropItemStack.GetNextItemStack returns null while ResolvedItemstack is null).
-            var stacks = BuildStacks(DropScaling.ScaleAll(table, config));
-            foreach (var stack in stacks)
-            {
-                stack.Resolve(api.World, "goodhunting", collectible.Code);
-            }
+            // Parsed exactly as the behaviour's own Initialize does; its OnLoaded (StartServerSide
+            // phase, after AssetsFinalize) resolves the stacks.
+            behavior.ProcessedStacks = new JsonObject(drops).AsObject<BlockDropItemStack[]>(null);
 
-            behavior.ProcessedStacks = stacks;
-            fishApplied++;
+            // Clients rebuild the behaviour from this string (sent in the server asset packet, which
+            // is built after AssetsFinalize), so the handbook shows the server's yields.
+            var properties = JObject.Parse(behavior.propertiesAtString);
+            properties["processedStacks"] = drops;
+            behavior.propertiesAtString = properties.ToString(Formatting.None);
+
+            applied.Add(collectible.Code.Path);
         }
+
+        WarnUnapplied("fish variants", GoodHuntingData.Fish.Keys, applied);
+        return applied.Count;
     }
 
-    private static CollectibleBehaviorGroundStoredProcessable? FindProcessable(CollectibleObject collectible)
+    // A game update that renames an entity, item or behaviour turns its table entry into a no-op;
+    // say so instead of failing silently.
+    private void WarnUnapplied(string kind, IEnumerable<string> owned, HashSet<string> applied)
     {
-        if (collectible.CollectibleBehaviors == null)
+        var missing = owned.Where(code => !applied.Contains(code)).ToList();
+        if (missing.Count > 0)
         {
-            return null;
+            Mod.Logger.Warning("{0} {1} could not be updated (not in the game, or missing the expected behaviour): {2}",
+                missing.Count, kind, string.Join(", ", missing));
         }
-
-        foreach (var behavior in collectible.CollectibleBehaviors)
-        {
-            if (behavior is CollectibleBehaviorGroundStoredProcessable processable)
-            {
-                return processable;
-            }
-        }
-
-        return null;
-    }
-
-    private static BlockDropItemStack[] BuildStacks(IReadOnlyList<DropSpec> drops)
-    {
-        var stacks = new BlockDropItemStack[drops.Count];
-        for (var i = 0; i < drops.Count; i++)
-        {
-            var drop = drops[i];
-            stacks[i] = new BlockDropItemStack
-            {
-                Type = string.Equals(drop.Type, "block", System.StringComparison.OrdinalIgnoreCase)
-                    ? EnumItemClass.Block
-                    : EnumItemClass.Item,
-                Code = new AssetLocation(drop.Code),
-                Quantity = new NatFloat(drop.Avg, drop.Var, EnumDistribution.UNIFORM),
-            };
-        }
-        return stacks;
     }
 }

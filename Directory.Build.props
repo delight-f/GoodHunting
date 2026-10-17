@@ -10,10 +10,4 @@
     <VintageStoryDir Condition="'$(VintageStoryDir)' == ''">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/x86_64/stable/active/files/extra/vintagestory</VintageStoryDir>
   </PropertyGroup>
 
-  <!-- Fail loudly rather than with a wall of missing-reference errors. -->
-  <Target Name="EnsureVintageStoryReference" BeforeTargets="CoreCompile"
-          Condition="!Exists('$(VintageStoryDir)/VintagestoryAPI.dll')">
-    <Error Text="Vintage Story reference assemblies not found at '$(VintageStoryDir)'. Pass the path to your install with -p:VintageStoryDir=/path/to/vintagestory" />
-  </Target>
-
 </Project>

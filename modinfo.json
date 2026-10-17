@@ -1,11 +1,12 @@
 {
 	"dependencies": {
-		"game": "1.22.0"
+		"game": "1.22.7"
 	},
 	"authors": ["TaimatCompany", "GreenDragonette", "sineapse"],
 	"type": "code",
-	"modid": "goodhunting2",
-	"name": "Good Hunting 2",
+	"side": "Server",
+	"modid": "goodhuntingforked",
+	"name": "Good Hunting Forked",
 	"description": "Adjusts health and harvest values for realism, with configurable drop multipliers.",
-	"version": "2.0.0"
+	"version": "3.0.0"
 }

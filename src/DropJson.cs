@@ -28,11 +28,4 @@ public static class DropJson
         }
         return array;
     }
-
-    public static JObject Health(EntityEntry entry) => new()
-    {
-        ["code"] = "health",
-        ["currenthealth"] = entry.CurrentHealth,
-        ["maxhealth"] = entry.MaxHealth,
-    };
 }

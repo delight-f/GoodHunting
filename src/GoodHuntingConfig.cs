@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace GoodHunting;
 
 /// <summary>
-/// User-configurable drop multipliers, persisted to <c>ModConfig/goodhunting.json</c>.
+/// User-configurable drop multipliers, persisted to <c>ModConfig/goodhuntingforked.json</c>.
 /// A multiplier of 1.0 is the identity; values are clamped to [0, 100].
 /// </summary>
 public sealed class GoodHuntingConfig
