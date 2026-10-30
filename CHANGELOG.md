@@ -1,5 +1,36 @@
 # Changelog
 
+## 3.1.0
+
+Optional support for other mods' animals, so one set of multipliers can cover a whole modded
+world. Off unless you ask for it.
+
+**Added**
+- `moddedAnimalDomains`: domain ids of other mods' animals whose harvest drops the multipliers
+  also apply to, e.g. `["bovinae"]`, or `["*"]` for every modded animal. Empty by default,
+  which leaves 3.0.0 behaviour unchanged.
+- Modded drops are scaled from the values the engine already resolved, so nothing is copied
+  from the other mod and a release that adds species or retunes its animals needs no change
+  here. The `harvestableDrops` handbook copy clients receive is refreshed, as it already is for
+  vanilla animals.
+- Species pelts are treated as hides, and a drop's flat `offset` (how Fauna of the Stone Age
+  writes "always exactly one pelt") scales with the multiplier rather than sitting outside it.
+- The startup log names the domains it scaled, and warns when a configured domain matched no
+  installed animal or when an animal has no harvestable drops left to scale.
+
+**Unchanged**
+- Modded animals' health is not touched. Good Hunting's health values are per vanilla species
+  and do not generalise to another mod's animals.
+- With every multiplier at `1.0` the modded path writes nothing, so switching the key on
+  changes no yields by itself.
+
+**Notes**
+- Verified on a dedicated 1.22.7 server with Fauna of the Stone Age `bovinae` and `caninae`
+  installed: 313 modded entity types across 2 domains. With the feature on and every multiplier
+  at `1.0`, drops, the client handbook copy and health were identical to running the packs
+  alone (0 differences). With meat `2.0` and hides `0.5`, all 779 modded drop entries matched
+  the expected result, including 308 pelts; fat and health were untouched.
+
 ## 3.0.0
 
 Renamed to Good Hunting Forked and made server-side only. Same tuning and config keys.

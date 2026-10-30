@@ -36,7 +36,7 @@ animal's drop and health values. That worked, but it had two drawbacks:
 
 ## Installation
 
-1. Drop `goodhuntingforked_3.0.0.zip` into your `Mods` folder.
+1. Drop `goodhuntingforked_3.1.0.zip` into your `Mods` folder.
    - Multiplayer: the server's `<server data>/Mods/` only. Players do not install it.
    - Single player: `~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/Mods/`
      (Flatpak) or `%appdata%/VintagestoryData/Mods/` (Windows).
@@ -59,7 +59,8 @@ animal's drop and health values. That worked, but it had two drawbacks:
   "fatMultiplier": 1.0,
   "meatMultiplier": 1.0,
   "featherMultiplier": 1.0,
-  "allMultiplier": 1.0
+  "allMultiplier": 1.0,
+  "moddedAnimalDomains": []
 }
 ```
 
@@ -70,6 +71,7 @@ animal's drop and health values. That worked, but it had two drawbacks:
 | `meatMultiplier` | meat | `redmeat-raw`, `bushmeat-raw`, `fish-raw`, `poultry-raw` |
 | `featherMultiplier` | feathers | `feather` |
 | `allMultiplier` | everything | any drop, applied **on top of** the category multiplier |
+| `moddedAnimalDomains` | other mods' animals | domain ids such as `["bovinae"]`, or `["*"]` for every modded animal; empty leaves them alone |
 
 - `1.0` is the identity (vanilla Good Hunting tuning). `2.0` doubles both the average and the
   variation of a drop. `0.5` halves them. `0.0` removes the drop.
@@ -79,7 +81,7 @@ animal's drop and health values. That worked, but it had two drawbacks:
   `allMultiplier: 3` gives meat drops `6×`.
 - Multipliers apply to the 181 entity types and 68 fish variants this mod tunes. Tamed and
   semi-tamed elk, 13 small fish (shad, chub, reef fish) and other mods' animals keep their own
-  drops.
+  drops unless you name their domain in `moddedAnimalDomains` (see *Other animal mods* below).
 - `enabled: false` leaves the game untouched.
 - An unreadable file is logged as an error and left as-is; the mod runs at defaults until it is
   fixed.
@@ -87,8 +89,50 @@ animal's drop and health values. That worked, but it had two drawbacks:
 Restart the game or server after editing.
 
 > **Hides:** the yield is an average, so a `hideMultiplier` above `1.0` can occasionally
-> produce more than one hide from a single animal. If that bothers you, leave hides at `1.0`
-> and lift `fat`/`meat` instead.
+> produce more than one hide from a single animal. Below `1.0` it works the same way in
+> reverse: a guaranteed hide -- or another mod's species pelt -- at `0.5` is given out half
+> the time and skipped the other half. If that bothers you, leave hides at `1.0` and lift
+> `fat`/`meat` instead.
+
+---
+
+## Other animal mods (Fauna of the Stone Age)
+
+By default this mod only rebalances the game's own animals. Animal mods keep their own
+balance, and nothing is overwritten.
+
+If you would rather have one set of multipliers across every animal in your world, name the
+mod's **domain** in `moddedAnimalDomains`:
+
+```json
+"moddedAnimalDomains": ["*"]
+```
+
+`"*"` covers every modded animal. For finer control, list the domains you want instead -- each
+pack in Fauna of the Stone Age is its own domain, for example `["bovinae", "caninae",
+"pantherinae"]`. Find a domain by looking at the mod id in the pack's `modinfo.json`, or by
+running the game once with `"*"` and reading the startup log; it lists every domain it scaled.
+
+How it behaves:
+
+- The mod multiplies whatever each animal already drops -- it does not replace another mod's
+  numbers, so a pack that adds species or retunes its animals needs no update here.
+- Drops are matched by item code, exactly as for vanilla animals: hides (a pack's species pelt
+  counts as its hide), `fat`, the raw meat codes and feathers. Anything else a pack adds --
+  horns, sinew, tools -- is left alone unless you set `allMultiplier`.
+- **Health is not changed.** Good Hunting's health values are hand-tuned per vanilla species;
+  there is no sensible way to derive them for another mod's animals, so that mod's combat
+  balance is left intact.
+- Multipliers are applied on top of whatever is already loaded, so combining this with
+  *Fauna of the Stone Age: Vanilla Values* gives you the vanilla-value baseline multiplied by
+  your settings.
+- If a carcass mod (e.g. Butchering) has replaced an animal's harvest behaviour, there are no
+  drops left to scale. The mod logs how many were skipped rather than failing.
+- A domain that matches no installed animal is reported in the log, so a typo does not fail
+  silently.
+
+Set every multiplier to `1.0` and this is a no-op — turning it on never changes yields on its
+own.
 
 ---
 
@@ -105,9 +149,13 @@ Restart the game or server after editing.
 - Fish yields replace `CollectibleBehaviorGroundStoredProcessable.ProcessedStacks` on each
   `fishraw` variant, and the behaviour's `propertiesAtString` (what clients rebuild it from)
   is rewritten to match.
-- Only `game:` domain codes are matched. Any table entry that finds no entity, item or
-  behaviour is listed in a warning, so a game update that renames something does not fail
+- Only `game:` domain codes are matched by the tables. Any table entry that finds no entity, item
+  or behaviour is listed in a warning, so a game update that renames something does not fail
   silently.
+- When `moddedAnimalDomains` names other mods, their animals' own `harvestable` drops are
+  multiplied from the values the engine resolved -- nothing is copied out of that mod. The
+  first-seen array is kept as the baseline, so an asset reload scales from the original rather
+  than compounding.
 - The chicken render-size tweak is a server-side asset patch; clients receive the size in the
   entity type packet.
 - The `src/Data/GoodHuntingData.g.cs` tables are generated from two real-engine dumps of the
@@ -126,7 +174,7 @@ export DOTNET_ROOT=$HOME/.dotnet PATH=$HOME/.dotnet:$PATH
 
 dotnet build -c Release                 # -> bin/Release/GoodHunting.dll
 dotnet run --project tests -c Release -- .   # unit tests + golden parity
-tools/package.sh                        # tests, build -> dist/goodhuntingforked_3.0.0.zip
+tools/package.sh                        # tests, build -> dist/goodhuntingforked_3.1.0.zip
 ```
 
 Override the game reference directory if yours differs:
@@ -161,15 +209,23 @@ render size, and the fish behaviour properties string).
 - **Multipliers:** with `meatMultiplier: 2, hideMultiplier: 0.5`, every owned meat entry doubled
   and every hide entry halved, on the server and in what clients receive; health and unowned
   types were untouched.
-- **Tests:** `tests/` runs 4,909 assertions (classifier, clamping, multiplier ordering,
-  no-mutation, disabled mode, injected-JSON shape, and table/golden consistency).
+- **Tests:** `tests/` runs 4,938 assertions (classifier, clamping, multiplier ordering,
+  no-mutation, disabled mode, injected-JSON shape, modded-drop scaling, and table/golden
+  consistency).
+- **Modded animals:** a local 1.22.7 dedicated server with Fauna of the Stone Age `bovinae` and
+  `caninae` loaded 313 modded entity types across 2 domains. With `moddedAnimalDomains: ["*"]`
+  and every multiplier at `1.0`, the resolved drops, the client handbook copy and health matched
+  running the packs alone: **0 differences**. With `meatMultiplier: 2, hideMultiplier: 0.5`, all
+  779 modded drop entries matched the expected result (meat doubled, 308 pelts halved, fat and
+  health untouched), and the log reported the counts it applied.
 
 ---
 
 ## Rollback
 
-1. Delete `goodhuntingforked_3.0.0.zip` from `Mods/`.
-2. Restore the archived `goodhunting_*.zip` or `goodhunting2_*.zip` and restart.
+1. Delete `goodhuntingforked_3.1.0.zip` from `Mods/`.
+2. Restore the archived `goodhuntingforked_3.0.0.zip` (or the older `goodhunting_*.zip` /
+   `goodhunting2_*.zip`) and restart.
 3. Optionally delete `ModConfig/goodhuntingforked.json` (it is ignored when this mod is absent).
 
 Server operators: the ids differ, so the game will not complain if both are present -- but

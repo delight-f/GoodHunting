@@ -63,7 +63,13 @@ public class ProbeModSystem : ModSystem
             first = false;
             sb.Append("    ").Append(J(code)).Append(": {");
 
-            sb.Append("\"drops\": ");
+            // Which mod an entity belongs to, and what class it is. The key above is the path
+            // only (tools/build_data.py depends on that), so without these two a modded animal
+            // and a vanilla one with the same path are indistinguishable in the dump.
+            sb.Append("\"domain\": ").Append(J(t.Code.Domain ?? ""));
+            sb.Append(",\"class\": ").Append(J(t.Class ?? ""));
+
+            sb.Append(",\"drops\": ");
             dropCount += AppendDrops(sb, harvest?["drops"]);
 
             // What clients receive: the handbook's harvestableDrops attribute.
@@ -177,6 +183,9 @@ public class ProbeModSystem : ModSystem
               .Append(",\"code\":").Append(J(d["code"]?.AsString() ?? ""))
               .Append(",\"avg\":").Append(F(q?["avg"]?.AsFloat()))
               .Append(",\"var\":").Append(F(q?["var"]?.AsFloat()))
+              // Raw quantity as the engine kept it: shapes like {offset:1, avg:0} flatten to 0
+              // above, which would otherwise look like "drops nothing".
+              .Append(",\"q\":").Append(q?.Token == null ? "null" : q.Token.ToString(Newtonsoft.Json.Formatting.None))
               .Append("}");
         }
         sb.Append("]");

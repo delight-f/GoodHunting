@@ -36,6 +36,13 @@ public static class DropCategories
             return DropCategory.Hide;
         }
 
+        // Some animal mods (e.g. Fauna of the Stone Age) drop a species pelt instead of a vanilla
+        // hide; it is the same thing to the player and converts to hide via a recipe.
+        if (path.StartsWith("pelt", System.StringComparison.Ordinal))
+        {
+            return DropCategory.Hide;
+        }
+
         if (path == "fat" || path.StartsWith("fat-", System.StringComparison.Ordinal))
         {
             return DropCategory.Fat;

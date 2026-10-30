@@ -23,6 +23,10 @@ public class GoodHuntingModSystem : ModSystem
 
     private GoodHuntingConfig config = new();
 
+    // First-seen drops for opted-in modded animals. In-place scaling is not idempotent, so a
+    // reload must re-scale this baseline rather than the already-scaled behaviour.
+    private readonly Dictionary<string, JArray> moddedBaseline = new(StringComparer.Ordinal);
+
     public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
 
     // Late in AssetsFinalize so these tables win over other mods' finalize-time edits. The built-in
@@ -62,6 +66,7 @@ public class GoodHuntingModSystem : ModSystem
 
         var entities = ApplyEntities(api);
         var fish = ApplyFish(api);
+        ApplyModdedEntities(api);
 
         Mod.Logger.Notification("{0} applied to {1}/{2} entity types and {3}/{4} fish variants " +
             "(hide={5}, fat={6}, meat={7}, feather={8}, all={9}).",
@@ -156,6 +161,113 @@ public class GoodHuntingModSystem : ModSystem
 
         WarnUnapplied("fish variants", GoodHuntingData.Fish.Keys, applied);
         return applied.Count;
+    }
+
+    // Other mods' animals keep whatever their own mod resolved. When the user names their domains,
+    // scale those drops in place from that resolved array -- nothing is copied out of the other mod,
+    // so its next release can add species or retune values with no change here.
+    private void ApplyModdedEntities(ICoreAPI api)
+    {
+        var configured = config.ModdedAnimalDomains;
+        if (configured == null || configured.Length == 0)
+        {
+            return;
+        }
+
+        var scaled = 0;
+        var withoutDrops = 0;
+        var matchedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var type in api.World.EntityTypes)
+        {
+            if (type is null || type.Code is null)
+            {
+                continue;
+            }
+
+            var domain = type.Code.Domain;
+            if (domain == GlobalConstants.DefaultDomain || !config.ScalesDomain(domain))
+            {
+                continue;
+            }
+
+            var behaviors = type.Server?.BehaviorsAsJsonObj;
+            if (behaviors == null)
+            {
+                continue;
+            }
+
+            matchedDomains.Add(domain);
+
+            JObject? harvest = null;
+            foreach (var behavior in behaviors)
+            {
+                if (behavior?.Token is JObject token && token["code"]?.Value<string>() == "harvestable")
+                {
+                    harvest = token;
+                    break;
+                }
+            }
+
+            if (harvest?["drops"] is not JArray current)
+            {
+                // Carcass mods can replace the harvest behaviour outright; there is nothing to scale.
+                withoutDrops++;
+                continue;
+            }
+
+            var key = domain + ":" + type.Code.Path;
+            if (!moddedBaseline.TryGetValue(key, out var baseline))
+            {
+                baseline = (JArray)current.DeepClone();
+                moddedBaseline[key] = baseline;
+            }
+
+            var drops = DropScaling.ScaleExisting(baseline, config);
+            if (JToken.DeepEquals(current, drops))
+            {
+                continue;
+            }
+
+            harvest["drops"] = drops;
+
+            // Same handbook copy the vanilla path refreshes: the game synced it before this ran, so
+            // it would otherwise show the other mod's unscaled numbers to players.
+            if (type.Attributes?.Token is not JObject attributes)
+            {
+                attributes = new JObject();
+                type.Attributes = new JsonObject(attributes);
+            }
+            attributes["harvestableDrops"] = drops.DeepClone();
+            scaled++;
+        }
+
+        if (matchedDomains.Count == 0)
+        {
+            Mod.Logger.Warning("moddedAnimalDomains is set, but no entity types loaded for {0}; check the domain ids.",
+                string.Join(", ", configured));
+            return;
+        }
+
+        Mod.Logger.Notification("{0} scaled drops on {1} modded entity types across {2} domain(s): {3}.",
+            Mod.Info.Version, scaled, matchedDomains.Count, string.Join(", ", matchedDomains));
+
+        if (withoutDrops > 0)
+        {
+            Mod.Logger.Warning("{0} modded entity types have no harvestable drops to scale and keep their own values.", withoutDrops);
+        }
+
+        if (!configured.Contains("*"))
+        {
+            var missing = configured
+                .Where(entry => !string.IsNullOrEmpty(entry) && !matchedDomains.Contains(entry))
+                .ToList();
+            if (missing.Count > 0)
+            {
+                Mod.Logger.Warning("moddedAnimalDomains lists domains with no loaded entity types: {0}.",
+                    string.Join(", ", missing));
+            }
+        }
     }
 
     // A game update that renames an entity, item or behaviour turns its table entry into a no-op;

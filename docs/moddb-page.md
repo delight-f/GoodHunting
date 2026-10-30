@@ -38,7 +38,7 @@ If you have ever wanted "more meat from the animals I actually worked for", this
 
 ## Installing
 
-1. Put `goodhuntingforked_3.0.0.zip` in your `Mods` folder.
+1. Put `goodhuntingforked_3.1.0.zip` in your `Mods` folder.
    - Windows: `%appdata%\VintagestoryData\Mods`
    - Linux (Flatpak): `~/.var/app/at.vintagestory.VintageStory/config/VintagestoryData/Mods`
    - Server: the `Mods` folder inside your server's data directory.
@@ -98,7 +98,8 @@ button. From there, go up one level and into `ModConfig`.
   "fatMultiplier": 1.0,
   "meatMultiplier": 1.0,
   "featherMultiplier": 1.0,
-  "allMultiplier": 1.0
+  "allMultiplier": 1.0,
+  "moddedAnimalDomains": []
 }
 ```
 
@@ -112,6 +113,13 @@ button. From there, go up one level and into `ModConfig`.
 | `meatMultiplier` | Meat | red meat, bushmeat, poultry and raw fish |
 | `featherMultiplier` | Feathers | bird feathers |
 | `allMultiplier` | Everything | applied on top of whichever category above also matches |
+| `moddedAnimalDomains` | Other mods' animals | domains to include, e.g. `["bovinae"]`; `["*"]` for all; empty leaves them alone |
+
+**Other animal mods.** Out of the box this mod leaves every other mod's animals exactly as they
+are. If you want your multipliers to reach them too -- Fauna of the Stone Age packs, for
+example -- add their domains to `moddedAnimalDomains`, or use `["*"]` for the lot. Their drops
+are multiplied; their health is not touched, so their combat balance stays as their author
+intended.
 
 **How the numbers work.** A multiplier is just a "times" number:
 
@@ -146,8 +154,9 @@ typing a silly value.
   you will be fine. If you break the file, the game logs an error and uses the default
   settings until you fix it. Delete it and the game will simply write a fresh one.
 - **Hides are an average.** Setting `hideMultiplier` above `1.0` can occasionally give you more
-  than one hide from a single animal. If that bothers you, leave hides at `1.0` and boost
-  `fatMultiplier` and `meatMultiplier` instead.
+  than one hide from a single animal. Below `1.0` the same applies in reverse -- a guaranteed
+  hide is skipped roughly half the time at `0.5`. If that bothers you, leave hides at `1.0` and
+  boost `fatMultiplier` and `meatMultiplier` instead.
 
 ## Q & A
 
@@ -156,9 +165,11 @@ By default it changes the balance rather than simply inflating it -- some animal
 less, big ones give much more. Crank the multipliers up if you want a more generous world.
 
 **Will it work with other animal mods?**
-Good Hunting only touches the animals it knows about. Animal mods it has not been told about
-are left exactly as they are. If another mod changes the drops or health of those same vanilla
-animals, Good Hunting's numbers win.
+Out of the box, yes -- Good Hunting only touches the vanilla animals it knows about, and other
+mods' animals are left exactly as they are. If you want your multipliers to reach them as well,
+name their domains in `moddedAnimalDomains` (for example `["bovinae"]`, or `["*"]` for every
+modded animal): their drops are scaled, their health is not. If another mod changes the drops or
+health of those same vanilla animals, Good Hunting's numbers win.
 
 **Do I need to start a new world?**
 No. Drops and health are read when the game loads, so your existing world keeps working. You

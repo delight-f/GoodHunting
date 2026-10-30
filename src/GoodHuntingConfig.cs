@@ -32,6 +32,29 @@ public sealed class GoodHuntingConfig
     [JsonProperty("allMultiplier")]
     public float AllMultiplier { get; set; } = Identity;
 
+    /// <summary>
+    /// Domains of other mods' animals whose drops the multipliers also apply to. Empty leaves
+    /// modded animals exactly as they are; <c>"*"</c> covers every modded domain. The vanilla
+    /// domain is always excluded -- its animals come from the tables and would scale twice.
+    /// </summary>
+    [JsonProperty("moddedAnimalDomains")]
+    public string[] ModdedAnimalDomains { get; set; } = Array.Empty<string>();
+
+    private const string VanillaDomain = "game";
+
+    /// <summary>Whether an entity in this domain has its drops scaled by this mod.</summary>
+    public bool ScalesDomain(string? domain)
+    {
+        if (!Enabled || string.IsNullOrEmpty(domain)
+            || domain.Equals(VanillaDomain, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return ModdedAnimalDomains?.Any(entry =>
+            entry == "*" || string.Equals(entry, domain, StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
     public float ForCategory(DropCategory category) => category switch
     {
         DropCategory.Hide => HideMultiplier,

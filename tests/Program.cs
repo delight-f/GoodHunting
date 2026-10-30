@@ -25,6 +25,7 @@ public static class Program
         ClampTests();
         MultiplierTests();
         DropJsonTests();
+        ModdedScalingTests();
         ParityTests(Path.Combine(root, "tools", "golden_drops.json"));
 
         Console.WriteLine();
@@ -44,6 +45,7 @@ public static class Program
         Check(DropCategories.Classify("game:fish-raw") == DropCategory.Meat, "game:fish-raw -> meat");
         Check(DropCategories.Classify("feather") == DropCategory.Feather, "feather -> feather");
         Check(DropCategories.Classify("bone") == DropCategory.None, "bone -> none");
+        Check(DropCategories.Classify("bovinae:pelt-female-bos") == DropCategory.Hide, "species pelt -> hide");
         Check(DropCategories.Classify(null) == DropCategory.None, "null -> none");
     }
 
@@ -199,6 +201,84 @@ public static class Program
             new GoodHuntingConfig { MeatMultiplier = 2f }));
         Check((float)scaled[0]!["quantity"]!["avg"]! == 80f, "configured multiplier reaches the injected json");
     }
+
+    // Nothing here is specific to one mod: the scaler works on whatever drops the engine resolved
+    // for another mod's animal, so these cases use a Fauna of the Stone Age style array.
+    private static void ModdedScalingTests()
+    {
+        Section("modded animal drops");
+
+        Check(!new GoodHuntingConfig().ScalesDomain("bovinae"), "empty domain list leaves modded animals alone");
+        Check(!new GoodHuntingConfig().ScalesDomain(null), "null domain is not scaled");
+        Check(!new GoodHuntingConfig().ScalesDomain("game"), "vanilla domain is never scaled twice");
+        Check(!new GoodHuntingConfig { ModdedAnimalDomains = null! }.ScalesDomain("bovinae"), "null list is safe");
+        Check(!new GoodHuntingConfig { Enabled = false, ModdedAnimalDomains = new[] { "*" } }.ScalesDomain("bovinae"),
+            "disabled mod scales nothing");
+
+        var listed = new GoodHuntingConfig { ModdedAnimalDomains = new[] { "bovinae" } };
+        Check(listed.ScalesDomain("bovinae"), "listed domain is scaled");
+        Check(listed.ScalesDomain("Bovinae"), "domain match is case-insensitive");
+        Check(!listed.ScalesDomain("caninae"), "unlisted domain is untouched");
+
+        var everyDomain = new GoodHuntingConfig { ModdedAnimalDomains = new[] { "*" } };
+        Check(everyDomain.ScalesDomain("caninae") && everyDomain.ScalesDomain("bovinae"), "'*' covers every modded domain");
+        Check(!everyDomain.ScalesDomain("game"), "'*' still excludes the vanilla domain");
+
+        var source = ModdedDrops();
+
+        // At 1x the array must come back untouched, including int-typed numbers staying ints.
+        var identity = DropScaling.ScaleExisting(source, new GoodHuntingConfig());
+        Check(JToken.DeepEquals(source, identity), "1.0 leaves the array structurally identical");
+        Check(identity[2]!["quantity"]!["avg"]!.ToString(Formatting.None) == "40",
+            "1.0 keeps integer formatting");
+
+        var cfg = new GoodHuntingConfig { MeatMultiplier = 2f, HideMultiplier = 0.5f };
+        var scaled = DropScaling.ScaleExisting(source, cfg);
+        Check((float)scaled[0]!["quantity"]!["avg"]! == 1.5f, "hide halved");
+        Check((float)scaled[2]!["quantity"]!["avg"]! == 80f, "redmeat avg doubled");
+        Check((float)scaled[2]!["quantity"]!["var"]! == 12f, "redmeat var doubled");
+        Check((float)scaled[3]!["quantity"]!["avg"]! == 20f, "bushmeat doubled");
+        Check((float)scaled[1]!["quantity"]!["avg"]! == 1f, "species pelt treated as a hide and halved");
+        Check((float)scaled[4]!["quantity"]!["avg"]! == 8f, "fat untouched by a meat multiplier");
+        Check((float)scaled[5]!["quantity"]!["avg"]! == 1f, "uncategorised drop untouched");
+
+        var all = DropScaling.ScaleExisting(source, new GoodHuntingConfig { AllMultiplier = 3f });
+        Check((float)all[1]!["quantity"]!["avg"]! == 6f, "allMultiplier reaches modded item codes");
+        Check((float)all[5]!["quantity"]!["avg"]! == 3f, "allMultiplier reaches uncategorised drops");
+        Check((float)all[6]!["quantity"]!["min"]! == 6f && (float)all[6]!["quantity"]!["max"]! == 12f,
+            "allMultiplier reaches min/max shapes");
+
+        // A pelt written as {offset:1, avg:0, var:0} drops exactly one; only the offset carries
+        // the count, so it must scale or the hide multiplier does nothing to it.
+        Check((float)identity[8]!["quantity"]!["offset"]! == 1f, "1.0 leaves the flat offset alone");
+        Check((float)scaled[8]!["quantity"]!["offset"]! == 0.5f, "flat offset follows the hide multiplier");
+        Check((float)all[8]!["quantity"]!["offset"]! == 3f, "flat offset follows allMultiplier");
+
+        Check(DropScaling.ScaleExisting(source, cfg)[7]!.ToString(Formatting.None)
+              == source[7]!.ToString(Formatting.None),
+            "entry without a quantity is passed through unchanged");
+        Check((float)source[0]!["quantity"]!["avg"]! == 3f && (float)source[2]!["quantity"]!["avg"]! == 40f,
+            "source array is not mutated");
+
+        // The system always re-scales its saved baseline, so a reload must land on the same values.
+        var baseline = ModdedDrops();
+        Check(JToken.DeepEquals(
+                DropScaling.ScaleExisting(baseline, cfg),
+                DropScaling.ScaleExisting(baseline, cfg)),
+            "scaling from the baseline is repeatable");
+    }
+
+    private static JArray ModdedDrops() => JArray.Parse(@"[
+        { ""type"": ""item"", ""code"": ""hide-raw-huge"", ""quantity"": { ""avg"": 3, ""var"": 1 } },
+        { ""type"": ""item"", ""code"": ""bovinae:pelt-aurochs"", ""quantity"": { ""avg"": 2 } },
+        { ""type"": ""item"", ""code"": ""redmeat-raw"", ""quantity"": { ""avg"": 40, ""var"": 6 } },
+        { ""type"": ""item"", ""code"": ""bushmeat-raw"", ""quantity"": { ""avg"": 10, ""var"": 2 } },
+        { ""type"": ""item"", ""code"": ""fat"", ""quantity"": { ""avg"": 8 } },
+        { ""type"": ""item"", ""code"": ""bone"", ""quantity"": { ""avg"": 1 } },
+        { ""type"": ""item"", ""code"": ""game:hide-raw-large"", ""quantity"": { ""min"": 2, ""max"": 4 } },
+        { ""type"": ""item"", ""code"": ""sinew"" },
+        { ""type"": ""item"", ""code"": ""bovinae:pelt-bull"", ""quantity"": { ""offset"": 1, ""avg"": 0, ""var"": 0 } }
+    ]");
 
     private static void Section(string name)
     {
