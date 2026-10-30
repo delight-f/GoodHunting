@@ -62,8 +62,8 @@ animals give different amounts, and that a bear is finally worth the trouble.
 ## Making it yours -- the config (no coding needed)
 
 The first time you run the game with Good Hunting installed, it creates a small settings file
-for you. It is a plain text file with six lines in it. You do not need to know anything about
-programming to change it -- if you can edit a text file, you can balance this mod.
+for you. It is a plain text file with seven settings in it. You do not need to know anything
+about programming to change it -- if you can edit a text file, you can balance this mod.
 
 **Where the file is:**
 
@@ -119,7 +119,9 @@ button. From there, go up one level and into `ModConfig`.
 are. If you want your multipliers to reach them too -- Fauna of the Stone Age packs, for
 example -- add their domains to `moddedAnimalDomains`, or use `["*"]` for the lot. Their drops
 are multiplied; their health is not touched, so their combat balance stays as their author
-intended.
+intended. A pack's species pelt counts as its hide, and if a carcass mod such as Butchering has
+replaced an animal's harvest behaviour there is nothing left to scale -- the server log says how
+many were skipped rather than failing.
 
 **How the numbers work.** A multiplier is just a "times" number:
 
@@ -132,7 +134,8 @@ So if you want more meat from every animal, change `meatMultiplier` from `1.0` t
 you want a generous world, set `allMultiplier` to `1.5` and leave the rest alone.
 
 Multipliers apply to the animals and fish Good Hunting tunes. Tamed elk, a few small fish
-(shad, chub and reef fish) and animals from other mods keep their own drops.
+(shad, chub and reef fish) and animals from other mods keep their own drops, unless you name
+their domain in `moddedAnimalDomains`.
 
 Multipliers stack. If `meatMultiplier` is `2.0` and `allMultiplier` is `3.0`, meat ends up
 six times normal (`2 x 3`). Numbers are capped at `100`, so you cannot break anything by
@@ -190,6 +193,7 @@ run only one.
 
 | | |
 |---|---|
+| Version | 3.1.0 |
 | Game version | Vintage Story 1.22.7 |
 | Side | Server (players do not need it) |
 | Mod id | `goodhuntingforked` |
