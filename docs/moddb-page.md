@@ -99,7 +99,7 @@ button. From there, go up one level and into `ModConfig`.
   "meatMultiplier": 1.0,
   "featherMultiplier": 1.0,
   "allMultiplier": 1.0,
-  "moddedAnimalDomains": []
+  "moddedAnimalDomains": ["*"]
 }
 ```
 
@@ -113,15 +113,15 @@ button. From there, go up one level and into `ModConfig`.
 | `meatMultiplier` | Meat | red meat, bushmeat, poultry and raw fish |
 | `featherMultiplier` | Feathers | bird feathers |
 | `allMultiplier` | Everything | applied on top of whichever category above also matches |
-| `moddedAnimalDomains` | Other mods' animals | domains to include, e.g. `["bovinae"]`; `["*"]` for all; empty leaves them alone |
+| `moddedAnimalDomains` | Other mods' animals | `["*"]` (the default) covers every modded animal; `[]` leaves them on their own balance |
 
-**Other animal mods.** Out of the box this mod leaves every other mod's animals exactly as they
-are. If you want your multipliers to reach them too -- Fauna of the Stone Age packs, for
-example -- add their domains to `moddedAnimalDomains`, or use `["*"]` for the lot. Their drops
-are multiplied; their health is not touched, so their combat balance stays as their author
-intended. A pack's species pelt counts as its hide, and if a carcass mod such as Butchering has
-replaced an animal's harvest behaviour there is nothing left to scale -- the server log says how
-many were skipped rather than failing.
+**Other animal mods.** Your multipliers reach other mods' animals out of the box -- Fauna of the
+Stone Age packs, for example. Their drops are multiplied, never replaced, and their health is
+not touched, so their combat balance stays as their author intended. A pack's species pelt
+counts as its hide, and if a carcass mod such as Butchering has replaced an animal's harvest
+behaviour there is nothing left to scale -- the server log says how many were skipped rather
+than failing. To leave other mods' animals on their own balance, set
+`"moddedAnimalDomains": []`.
 
 **How the numbers work.** A multiplier is just a "times" number:
 
@@ -133,9 +133,9 @@ many were skipped rather than failing.
 So if you want more meat from every animal, change `meatMultiplier` from `1.0` to `2.0`. If
 you want a generous world, set `allMultiplier` to `1.5` and leave the rest alone.
 
-Multipliers apply to the animals and fish Good Hunting tunes. Tamed elk, a few small fish
-(shad, chub and reef fish) and animals from other mods keep their own drops, unless you name
-their domain in `moddedAnimalDomains`.
+Multipliers apply to the animals and fish Good Hunting tunes, and to the animals of other mods
+you have installed. Tamed elk and a few small fish (shad, chub and reef fish) keep their own
+drops.
 
 Multipliers stack. If `meatMultiplier` is `2.0` and `allMultiplier` is `3.0`, meat ends up
 six times normal (`2 x 3`). Numbers are capped at `100`, so you cannot break anything by
@@ -168,11 +168,11 @@ By default it changes the balance rather than simply inflating it -- some animal
 less, big ones give much more. Crank the multipliers up if you want a more generous world.
 
 **Will it work with other animal mods?**
-Out of the box, yes -- Good Hunting only touches the vanilla animals it knows about, and other
-mods' animals are left exactly as they are. If you want your multipliers to reach them as well,
-name their domains in `moddedAnimalDomains` (for example `["bovinae"]`, or `["*"]` for every
-modded animal): their drops are scaled, their health is not. If another mod changes the drops or
-health of those same vanilla animals, Good Hunting's numbers win.
+Yes, and your multipliers reach them by default. Good Hunting only multiplies the drops those
+animals already have; it never replaces another mod's balance or touches its health. If you want
+other mods' animals left alone, set `"moddedAnimalDomains": []`. If another mod changes the
+drops or health of the same vanilla animals, only one set of numbers can win -- run one or the
+other.
 
 **Do I need to start a new world?**
 No. Drops and health are read when the game loads, so your existing world keeps working. You

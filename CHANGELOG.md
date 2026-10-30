@@ -3,12 +3,12 @@
 ## 3.1.0
 
 Optional support for other mods' animals, so one set of multipliers can cover a whole modded
-world. Off unless you ask for it.
+world. On by default; set the list empty to opt out.
 
 **Added**
-- `moddedAnimalDomains`: domain ids of other mods' animals whose harvest drops the multipliers
-  also apply to, e.g. `["bovinae"]`, or `["*"]` for every modded animal. Empty by default,
-  which leaves 3.0.0 behaviour unchanged.
+- `moddedAnimalDomains`: which other mods' animals follow your multipliers. Defaults to `["*"]`
+  (every modded animal); list domains such as `["bovinae", "caninae"]` to narrow it, or set `[]`
+  to leave other mods' animals on their own balance.
 - Modded drops are scaled from the values the engine already resolved, so nothing is copied
   from the other mod and a release that adds species or retunes its animals needs no change
   here. The `harvestableDrops` handbook copy clients receive is refreshed, as it already is for
@@ -17,6 +17,11 @@ world. Off unless you ask for it.
   writes "always exactly one pelt") scales with the multiplier rather than sitting outside it.
 - The startup log names the domains it scaled, and warns when a configured domain matched no
   installed animal or when an animal has no harvestable drops left to scale.
+
+**Changed**
+- Animals from other mods now follow your multipliers by default. If you already raise one of
+  them, those animals' yields change on upgrade; set `moddedAnimalDomains` to `[]` for the 3.0.0
+  behaviour.
 
 **Unchanged**
 - Modded animals' health is not touched. Good Hunting's health values are per vanilla species

@@ -244,8 +244,13 @@ public class GoodHuntingModSystem : ModSystem
 
         if (matchedDomains.Count == 0)
         {
-            Mod.Logger.Warning("moddedAnimalDomains is set, but no entity types loaded for {0}; check the domain ids.",
-                string.Join(", ", configured));
+            // The default is every modded domain, so a world with no animal mods lands here and
+            // is not a problem. Only a named list that matched nothing is worth a warning.
+            if (!configured.Contains(GoodHuntingConfig.EveryDomain))
+            {
+                Mod.Logger.Warning("moddedAnimalDomains is set, but no entity types loaded for {0}; check the domain ids.",
+                    string.Join(", ", configured));
+            }
             return;
         }
 

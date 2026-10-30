@@ -60,7 +60,7 @@ animal's drop and health values. That worked, but it had two drawbacks:
   "meatMultiplier": 1.0,
   "featherMultiplier": 1.0,
   "allMultiplier": 1.0,
-  "moddedAnimalDomains": []
+  "moddedAnimalDomains": ["*"]
 }
 ```
 
@@ -71,7 +71,7 @@ animal's drop and health values. That worked, but it had two drawbacks:
 | `meatMultiplier` | meat | `redmeat-raw`, `bushmeat-raw`, `fish-raw`, `poultry-raw` |
 | `featherMultiplier` | feathers | `feather` |
 | `allMultiplier` | everything | any drop, applied **on top of** the category multiplier |
-| `moddedAnimalDomains` | other mods' animals | domain ids such as `["bovinae"]`, or `["*"]` for every modded animal; empty leaves them alone |
+| `moddedAnimalDomains` | other mods' animals | `["*"]` (the default) covers every modded animal; list ids such as `["bovinae"]` to narrow it; `[]` leaves them alone |
 
 - `1.0` is the identity (vanilla Good Hunting tuning). `2.0` doubles both the average and the
   variation of a drop. `0.5` halves them. `0.0` removes the drop.
@@ -79,9 +79,9 @@ animal's drop and health values. That worked, but it had two drawbacks:
   `all` values are multiplied together.
 - `allMultiplier` is applied on top of the category multiplier, so `meatMultiplier: 2` with
   `allMultiplier: 3` gives meat drops `6×`.
-- Multipliers apply to the 181 entity types and 68 fish variants this mod tunes. Tamed and
-  semi-tamed elk, 13 small fish (shad, chub, reef fish) and other mods' animals keep their own
-  drops unless you name their domain in `moddedAnimalDomains` (see *Other animal mods* below).
+- Multipliers apply to the 181 entity types and 68 fish variants this mod tunes, plus -- by
+  default -- the animals of any other mod you have installed. Tamed and semi-tamed elk and 13
+  small fish (shad, chub, reef fish) keep their own drops. See *Other animal mods* below.
 - `enabled: false` leaves the game untouched.
 - An unreadable file is logged as an error and left as-is; the mod runs at defaults until it is
   fixed.
@@ -98,20 +98,18 @@ Restart the game or server after editing.
 
 ## Other animal mods (Fauna of the Stone Age)
 
-By default this mod only rebalances the game's own animals. Animal mods keep their own
-balance, and nothing is overwritten.
+Your multipliers reach the animals of other mods too, out of the box, and nothing is copied or
+overwritten: the mod takes whatever those animals already drop and multiplies it.
 
-If you would rather have one set of multipliers across every animal in your world, name the
-mod's **domain** in `moddedAnimalDomains`:
+If you would rather leave other mods' animals on their own balance, set the list empty:
 
 ```json
-"moddedAnimalDomains": ["*"]
+"moddedAnimalDomains": []
 ```
 
-`"*"` covers every modded animal. For finer control, list the domains you want instead -- each
-pack in Fauna of the Stone Age is its own domain, for example `["bovinae", "caninae",
-"pantherinae"]`. Find a domain by looking at the mod id in the pack's `modinfo.json`, or by
-running the game once with `"*"` and reading the startup log; it lists every domain it scaled.
+To include only some packs, name their domains instead -- each Fauna of the Stone Age pack is
+its own domain, for example `["bovinae", "caninae", "pantherinae"]`. The startup log lists every
+domain it scaled, which is the quickest way to find an id.
 
 How it behaves:
 
@@ -152,10 +150,9 @@ own.
 - Only `game:` domain codes are matched by the tables. Any table entry that finds no entity, item
   or behaviour is listed in a warning, so a game update that renames something does not fail
   silently.
-- When `moddedAnimalDomains` names other mods, their animals' own `harvestable` drops are
-  multiplied from the values the engine resolved -- nothing is copied out of that mod. The
-  first-seen array is kept as the baseline, so an asset reload scales from the original rather
-  than compounding.
+- Other mods' animals are scaled too, by default: their own `harvestable` drops are multiplied
+  from the values the engine resolved -- nothing is copied out of that mod. The first-seen array
+  is kept as the baseline, so an asset reload scales from the original rather than compounding.
 - The chicken render-size tweak is a server-side asset patch; clients receive the size in the
   entity type packet.
 - The `src/Data/GoodHuntingData.g.cs` tables are generated from two real-engine dumps of the

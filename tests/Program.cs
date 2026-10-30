@@ -208,7 +208,9 @@ public static class Program
     {
         Section("modded animal drops");
 
-        Check(!new GoodHuntingConfig().ScalesDomain("bovinae"), "empty domain list leaves modded animals alone");
+        Check(new GoodHuntingConfig().ScalesDomain("bovinae"), "modded domains are on by default");
+        Check(!new GoodHuntingConfig { ModdedAnimalDomains = Array.Empty<string>() }.ScalesDomain("bovinae"),
+            "an empty list opts modded animals out");
         Check(!new GoodHuntingConfig().ScalesDomain(null), "null domain is not scaled");
         Check(!new GoodHuntingConfig().ScalesDomain("game"), "vanilla domain is never scaled twice");
         Check(!new GoodHuntingConfig { ModdedAnimalDomains = null! }.ScalesDomain("bovinae"), "null list is safe");
